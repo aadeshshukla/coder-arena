@@ -140,7 +140,7 @@ export function runMatch(): void {
     
     if (actionA === 'ATTACK' && distance <= ATTACK_RANGE) {
       let damage = BASE_DAMAGE;
-      if (fighterB.blocking || actionB === 'BLOCK') {
+      if (actionB === 'BLOCK') {
         damage = damage * BLOCK_DAMAGE_MULTIPLIER;
       }
       damageToB = damage;
@@ -156,7 +156,7 @@ export function runMatch(): void {
     
     if (actionB === 'ATTACK' && distance <= ATTACK_RANGE) {
       let damage = BASE_DAMAGE;
-      if (fighterA.blocking || actionA === 'BLOCK') {
+      if (actionA === 'BLOCK') {
         damage = damage * BLOCK_DAMAGE_MULTIPLIER;
       }
       damageToA = damage;
