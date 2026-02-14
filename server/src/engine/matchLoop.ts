@@ -1,0 +1,284 @@
+import { Fighter, GameState } from '../../../shared/types/gameState';
+import { ActionType } from '../../../shared/types/actions';
+import { Rule } from '../../../shared/types/rules';
+
+function createFighter(x: number, y: number): Fighter {
+  return {
+    health: 100,
+    maxHealth: 100,
+    position: { x, y },
+    cooldowns: 0,
+    blocking: false,
+    attacking: false
+  };
+}
+
+function calculateDistance(fighterA: Fighter, fighterB: Fighter): number {
+  const dx = fighterA.position.x - fighterB.position.x;
+  const dy = fighterA.position.y - fighterB.position.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function evaluateRule(rule: Rule, fighter: Fighter, opponent: Fighter): boolean {
+  const distance = calculateDistance(fighter, opponent);
+  
+  switch (rule.condition.type) {
+    case 'ENEMY_HEALTH_LESS_THAN':
+      return opponent.health < rule.condition.value;
+    case 'ENEMY_HEALTH_GREATER_THAN':
+      return opponent.health > rule.condition.value;
+    case 'DISTANCE_LESS_THAN':
+      return distance < rule.condition.value;
+    case 'DISTANCE_GREATER_THAN':
+      return distance > rule.condition.value;
+    default:
+      return false;
+  }
+}
+
+function chooseAction(rules: Rule[], fighter: Fighter, opponent: Fighter): ActionType {
+  for (const rule of rules) {
+    if (evaluateRule(rule, fighter, opponent)) {
+      return rule.action;
+    }
+  }
+  return 'IDLE';
+}
+
+function applyAction(
+  action: ActionType,
+  fighter: Fighter,
+  opponent: Fighter
+): void {
+  const distance = calculateDistance(fighter, opponent);
+  
+  switch (action) {
+    case 'APPROACH':
+      // Move toward opponent
+      if (fighter.position.x < opponent.position.x) {
+        fighter.position.x += 1;
+      } else if (fighter.position.x > opponent.position.x) {
+        fighter.position.x -= 1;
+      }
+      if (fighter.position.y < opponent.position.y) {
+        fighter.position.y += 1;
+      } else if (fighter.position.y > opponent.position.y) {
+        fighter.position.y -= 1;
+      }
+      fighter.attacking = false;
+      fighter.blocking = false;
+      break;
+      
+    case 'RETREAT':
+      // Move away from opponent
+      if (fighter.position.x < opponent.position.x) {
+        fighter.position.x -= 1;
+      } else if (fighter.position.x > opponent.position.x) {
+        fighter.position.x += 1;
+      }
+      if (fighter.position.y < opponent.position.y) {
+        fighter.position.y -= 1;
+      } else if (fighter.position.y > opponent.position.y) {
+        fighter.position.y += 1;
+      }
+      fighter.attacking = false;
+      fighter.blocking = false;
+      break;
+      
+    case 'ATTACK':
+      fighter.attacking = true;
+      fighter.blocking = false;
+      // Deal damage if close enough
+      if (distance < 2) {
+        let damage = 10;
+        if (opponent.blocking) {
+          damage = damage * 0.5; // 50% reduction
+        }
+        opponent.health -= damage;
+      }
+      break;
+      
+    case 'BLOCK':
+      fighter.blocking = true;
+      fighter.attacking = false;
+      break;
+      
+    case 'IDLE':
+      fighter.attacking = false;
+      fighter.blocking = false;
+      break;
+  }
+}
+
+export function runMatch(): void {
+  // Initialize fighters
+  const fighterA = createFighter(0, 0);
+  const fighterB = createFighter(10, 0);
+  
+  // Define rules for fighterA - more defensive strategy
+  const rulesA: Rule[] = [
+    {
+      condition: { type: 'ENEMY_HEALTH_LESS_THAN', value: 40 },
+      action: 'ATTACK'
+    },
+    {
+      condition: { type: 'DISTANCE_LESS_THAN', value: 2.5 },
+      action: 'BLOCK'
+    },
+    {
+      condition: { type: 'DISTANCE_GREATER_THAN', value: 2.5 },
+      action: 'APPROACH'
+    }
+  ];
+  
+  // Define rules for fighterB - more aggressive strategy
+  const rulesB: Rule[] = [
+    {
+      condition: { type: 'DISTANCE_LESS_THAN', value: 3 },
+      action: 'ATTACK'
+    },
+    {
+      condition: { type: 'ENEMY_HEALTH_LESS_THAN', value: 30 },
+      action: 'ATTACK'
+    },
+    {
+      condition: { type: 'DISTANCE_GREATER_THAN', value: 3 },
+      action: 'APPROACH'
+    }
+  ];
+  
+  let tick = 0;
+  const maxTicks = 1000; // Safety limit to prevent infinite loops
+  
+  console.log('=== Match Start ===');
+  console.log(`Fighter A: Health=${fighterA.health}, Position=(${fighterA.position.x}, ${fighterA.position.y})`);
+  console.log(`Fighter B: Health=${fighterB.health}, Position=(${fighterB.position.x}, ${fighterB.position.y})`);
+  console.log('');
+  
+  // Simulation loop
+  while (fighterA.health > 0 && fighterB.health > 0 && tick < maxTicks) {
+    tick++;
+    
+    // Update cooldowns
+    if (fighterA.cooldowns > 0) fighterA.cooldowns--;
+    if (fighterB.cooldowns > 0) fighterB.cooldowns--;
+    
+    // Choose actions for both fighters BEFORE applying them
+    const actionA = chooseAction(rulesA, fighterA, fighterB);
+    const actionB = chooseAction(rulesB, fighterB, fighterA);
+    
+    // Apply actions in order - but attacks happen simultaneously
+    // Store damage to apply
+    let damageToA = 0;
+    let damageToB = 0;
+    
+    // Process attacks first to calculate damage
+    const distance = calculateDistance(fighterA, fighterB);
+    
+    if (actionA === 'ATTACK' && distance <= 2) {
+      let damage = 10;
+      if (fighterB.blocking || actionB === 'BLOCK') {
+        damage = damage * 0.5;
+      }
+      damageToB = damage;
+      fighterA.attacking = true;
+      fighterA.blocking = false;
+    } else if (actionA === 'BLOCK') {
+      fighterA.blocking = true;
+      fighterA.attacking = false;
+    } else {
+      fighterA.attacking = false;
+      fighterA.blocking = false;
+    }
+    
+    if (actionB === 'ATTACK' && distance <= 2) {
+      let damage = 10;
+      if (fighterA.blocking || actionA === 'BLOCK') {
+        damage = damage * 0.5;
+      }
+      damageToA = damage;
+      fighterB.attacking = true;
+      fighterB.blocking = false;
+    } else if (actionB === 'BLOCK') {
+      fighterB.blocking = true;
+      fighterB.attacking = false;
+    } else {
+      fighterB.attacking = false;
+      fighterB.blocking = false;
+    }
+    
+    // Apply damage
+    fighterA.health -= damageToA;
+    fighterB.health -= damageToB;
+    
+    // Then apply movement
+    if (actionA === 'APPROACH') {
+      if (fighterA.position.x < fighterB.position.x) {
+        fighterA.position.x += 1;
+      } else if (fighterA.position.x > fighterB.position.x) {
+        fighterA.position.x -= 1;
+      }
+      if (fighterA.position.y < fighterB.position.y) {
+        fighterA.position.y += 1;
+      } else if (fighterA.position.y > fighterB.position.y) {
+        fighterA.position.y -= 1;
+      }
+    } else if (actionA === 'RETREAT') {
+      if (fighterA.position.x < fighterB.position.x) {
+        fighterA.position.x -= 1;
+      } else if (fighterA.position.x > fighterB.position.x) {
+        fighterA.position.x += 1;
+      }
+      if (fighterA.position.y < fighterB.position.y) {
+        fighterA.position.y -= 1;
+      } else if (fighterA.position.y > fighterB.position.y) {
+        fighterA.position.y += 1;
+      }
+    }
+    
+    if (actionB === 'APPROACH') {
+      if (fighterB.position.x < fighterA.position.x) {
+        fighterB.position.x += 1;
+      } else if (fighterB.position.x > fighterA.position.x) {
+        fighterB.position.x -= 1;
+      }
+      if (fighterB.position.y < fighterA.position.y) {
+        fighterB.position.y += 1;
+      } else if (fighterB.position.y > fighterA.position.y) {
+        fighterB.position.y -= 1;
+      }
+    } else if (actionB === 'RETREAT') {
+      if (fighterB.position.x < fighterA.position.x) {
+        fighterB.position.x -= 1;
+      } else if (fighterB.position.x > fighterA.position.x) {
+        fighterB.position.x += 1;
+      }
+      if (fighterB.position.y < fighterA.position.y) {
+        fighterB.position.y -= 1;
+      } else if (fighterB.position.y > fighterA.position.y) {
+        fighterB.position.y += 1;
+      }
+    }
+    
+    // Log every 10 ticks to avoid spam
+    if (tick % 10 === 0 || fighterA.health <= 0 || fighterB.health <= 0) {
+      console.log(`Tick ${tick}:`);
+      console.log(`  Fighter A: ${actionA} | Health=${fighterA.health.toFixed(1)} | Position=(${fighterA.position.x}, ${fighterA.position.y})`);
+      console.log(`  Fighter B: ${actionB} | Health=${fighterB.health.toFixed(1)} | Position=(${fighterB.position.x}, ${fighterB.position.y})`);
+      console.log('');
+    }
+  }
+  
+  // Determine winner
+  console.log('=== Match End ===');
+  if (fighterA.health > 0 && fighterB.health <= 0) {
+    console.log(`Winner: Fighter A with ${fighterA.health.toFixed(1)} health remaining`);
+  } else if (fighterB.health > 0 && fighterA.health <= 0) {
+    console.log(`Winner: Fighter B with ${fighterB.health.toFixed(1)} health remaining`);
+  } else if (fighterA.health <= 0 && fighterB.health <= 0) {
+    console.log('Draw: Both fighters defeated');
+  } else {
+    console.log('Match reached maximum ticks');
+  }
+  console.log(`Total ticks: ${tick}`);
+}
