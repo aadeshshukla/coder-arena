@@ -2,6 +2,11 @@ import { Fighter, GameState } from '../../../shared/types/gameState';
 import { ActionType } from '../../../shared/types/actions';
 import { Rule } from '../../../shared/types/rules';
 
+// Game balance constants
+const BASE_DAMAGE = 10;
+const BLOCK_DAMAGE_MULTIPLIER = 0.5;
+const ATTACK_RANGE = 2;
+
 function createFighter(x: number, y: number): Fighter {
   return {
     health: 100,
@@ -42,6 +47,34 @@ function chooseAction(rules: Rule[], fighter: Fighter, opponent: Fighter): Actio
     }
   }
   return 'IDLE';
+}
+
+function applyMovement(fighter: Fighter, opponent: Fighter, moveToward: boolean): void {
+  if (moveToward) {
+    // Move toward opponent (APPROACH)
+    if (fighter.position.x < opponent.position.x) {
+      fighter.position.x += 1;
+    } else if (fighter.position.x > opponent.position.x) {
+      fighter.position.x -= 1;
+    }
+    if (fighter.position.y < opponent.position.y) {
+      fighter.position.y += 1;
+    } else if (fighter.position.y > opponent.position.y) {
+      fighter.position.y -= 1;
+    }
+  } else {
+    // Move away from opponent (RETREAT)
+    if (fighter.position.x < opponent.position.x) {
+      fighter.position.x -= 1;
+    } else if (fighter.position.x > opponent.position.x) {
+      fighter.position.x += 1;
+    }
+    if (fighter.position.y < opponent.position.y) {
+      fighter.position.y -= 1;
+    } else if (fighter.position.y > opponent.position.y) {
+      fighter.position.y += 1;
+    }
+  }
 }
 
 export function runMatch(): void {
@@ -105,10 +138,10 @@ export function runMatch(): void {
     // Process attacks first to calculate damage
     const distance = calculateDistance(fighterA, fighterB);
     
-    if (actionA === 'ATTACK' && distance <= 2) {
-      let damage = 10;
+    if (actionA === 'ATTACK' && distance <= ATTACK_RANGE) {
+      let damage = BASE_DAMAGE;
       if (fighterB.blocking || actionB === 'BLOCK') {
-        damage = damage * 0.5;
+        damage = damage * BLOCK_DAMAGE_MULTIPLIER;
       }
       damageToB = damage;
       fighterA.attacking = true;
@@ -121,10 +154,10 @@ export function runMatch(): void {
       fighterA.blocking = false;
     }
     
-    if (actionB === 'ATTACK' && distance <= 2) {
-      let damage = 10;
+    if (actionB === 'ATTACK' && distance <= ATTACK_RANGE) {
+      let damage = BASE_DAMAGE;
       if (fighterA.blocking || actionA === 'BLOCK') {
-        damage = damage * 0.5;
+        damage = damage * BLOCK_DAMAGE_MULTIPLIER;
       }
       damageToA = damage;
       fighterB.attacking = true;
@@ -143,51 +176,15 @@ export function runMatch(): void {
     
     // Then apply movement
     if (actionA === 'APPROACH') {
-      if (fighterA.position.x < fighterB.position.x) {
-        fighterA.position.x += 1;
-      } else if (fighterA.position.x > fighterB.position.x) {
-        fighterA.position.x -= 1;
-      }
-      if (fighterA.position.y < fighterB.position.y) {
-        fighterA.position.y += 1;
-      } else if (fighterA.position.y > fighterB.position.y) {
-        fighterA.position.y -= 1;
-      }
+      applyMovement(fighterA, fighterB, true);
     } else if (actionA === 'RETREAT') {
-      if (fighterA.position.x < fighterB.position.x) {
-        fighterA.position.x -= 1;
-      } else if (fighterA.position.x > fighterB.position.x) {
-        fighterA.position.x += 1;
-      }
-      if (fighterA.position.y < fighterB.position.y) {
-        fighterA.position.y -= 1;
-      } else if (fighterA.position.y > fighterB.position.y) {
-        fighterA.position.y += 1;
-      }
+      applyMovement(fighterA, fighterB, false);
     }
     
     if (actionB === 'APPROACH') {
-      if (fighterB.position.x < fighterA.position.x) {
-        fighterB.position.x += 1;
-      } else if (fighterB.position.x > fighterA.position.x) {
-        fighterB.position.x -= 1;
-      }
-      if (fighterB.position.y < fighterA.position.y) {
-        fighterB.position.y += 1;
-      } else if (fighterB.position.y > fighterA.position.y) {
-        fighterB.position.y -= 1;
-      }
+      applyMovement(fighterB, fighterA, true);
     } else if (actionB === 'RETREAT') {
-      if (fighterB.position.x < fighterA.position.x) {
-        fighterB.position.x -= 1;
-      } else if (fighterB.position.x > fighterA.position.x) {
-        fighterB.position.x += 1;
-      }
-      if (fighterB.position.y < fighterA.position.y) {
-        fighterB.position.y -= 1;
-      } else if (fighterB.position.y > fighterA.position.y) {
-        fighterB.position.y += 1;
-      }
+      applyMovement(fighterB, fighterA, false);
     }
     
     // Log every 10 ticks to avoid spam
