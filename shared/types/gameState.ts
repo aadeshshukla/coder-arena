@@ -7,7 +7,6 @@ export interface Fighter {
   health: number;
   maxHealth: number;
   position: Position;
-  cooldowns: number;
   blocking: boolean;
   attacking: boolean;
 }

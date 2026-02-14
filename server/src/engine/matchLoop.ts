@@ -7,7 +7,6 @@ function createFighter(x: number, y: number): Fighter {
     health: 100,
     maxHealth: 100,
     position: { x, y },
-    cooldowns: 0,
     blocking: false,
     attacking: false
   };
@@ -43,71 +42,6 @@ function chooseAction(rules: Rule[], fighter: Fighter, opponent: Fighter): Actio
     }
   }
   return 'IDLE';
-}
-
-function applyAction(
-  action: ActionType,
-  fighter: Fighter,
-  opponent: Fighter
-): void {
-  const distance = calculateDistance(fighter, opponent);
-  
-  switch (action) {
-    case 'APPROACH':
-      // Move toward opponent
-      if (fighter.position.x < opponent.position.x) {
-        fighter.position.x += 1;
-      } else if (fighter.position.x > opponent.position.x) {
-        fighter.position.x -= 1;
-      }
-      if (fighter.position.y < opponent.position.y) {
-        fighter.position.y += 1;
-      } else if (fighter.position.y > opponent.position.y) {
-        fighter.position.y -= 1;
-      }
-      fighter.attacking = false;
-      fighter.blocking = false;
-      break;
-      
-    case 'RETREAT':
-      // Move away from opponent
-      if (fighter.position.x < opponent.position.x) {
-        fighter.position.x -= 1;
-      } else if (fighter.position.x > opponent.position.x) {
-        fighter.position.x += 1;
-      }
-      if (fighter.position.y < opponent.position.y) {
-        fighter.position.y -= 1;
-      } else if (fighter.position.y > opponent.position.y) {
-        fighter.position.y += 1;
-      }
-      fighter.attacking = false;
-      fighter.blocking = false;
-      break;
-      
-    case 'ATTACK':
-      fighter.attacking = true;
-      fighter.blocking = false;
-      // Deal damage if close enough
-      if (distance < 2) {
-        let damage = 10;
-        if (opponent.blocking) {
-          damage = damage * 0.5; // 50% reduction
-        }
-        opponent.health -= damage;
-      }
-      break;
-      
-    case 'BLOCK':
-      fighter.blocking = true;
-      fighter.attacking = false;
-      break;
-      
-    case 'IDLE':
-      fighter.attacking = false;
-      fighter.blocking = false;
-      break;
-  }
 }
 
 export function runMatch(): void {
@@ -158,10 +92,6 @@ export function runMatch(): void {
   // Simulation loop
   while (fighterA.health > 0 && fighterB.health > 0 && tick < maxTicks) {
     tick++;
-    
-    // Update cooldowns
-    if (fighterA.cooldowns > 0) fighterA.cooldowns--;
-    if (fighterB.cooldowns > 0) fighterB.cooldowns--;
     
     // Choose actions for both fighters BEFORE applying them
     const actionA = chooseAction(rulesA, fighterA, fighterB);
