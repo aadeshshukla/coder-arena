@@ -25,64 +25,64 @@ function createFighter(x: number, y: number): Fighter {
 
 /**
  * Run a single match between two fighters
+ * Returns a promise that resolves when the match ends
  */
-function runSingleMatch(rulesA: (Rule | ExtendedRule)[], rulesB: (Rule | ExtendedRule)[]): void {
-  // Initialize match state
-  const state: MatchState = {
-    fighterA: createFighter(0, 0),
-    fighterB: createFighter(10, 0),
-    tick: 0
-  };
-  
-  console.log('=== Match Start ===');
-  console.log(`Fighter A: Health=${state.fighterA.health}, Position=(${state.fighterA.position.x}, ${state.fighterA.position.y})`);
-  console.log(`Fighter B: Health=${state.fighterB.health}, Position=(${state.fighterB.position.x}, ${state.fighterB.position.y})`);
-  console.log('');
-  
-  // Match loop - run until one fighter is defeated
-  const matchInterval = setInterval(() => {
-    // Evaluate actions for both fighters
-    const actionA = evaluateRules(rulesA, state.fighterA, state.fighterB);
-    const actionB = evaluateRules(rulesB, state.fighterB, state.fighterA);
+function runSingleMatch(rulesA: (Rule | ExtendedRule)[], rulesB: (Rule | ExtendedRule)[]): Promise<void> {
+  return new Promise((resolve) => {
+    // Initialize match state
+    const state: MatchState = {
+      fighterA: createFighter(0, 0),
+      fighterB: createFighter(10, 0),
+      tick: 0
+    };
     
-    // Simulate the tick
-    simulateTick(state, actionA, actionB);
-    
-    // Log current state
-    console.log(`Tick ${state.tick}:`);
-    console.log(`  ${actionA.padEnd(8)} | ${state.fighterA.health.toFixed(1).padStart(5)}`);
-    console.log(`  ${actionB.padEnd(8)} | ${state.fighterB.health.toFixed(1).padStart(5)}`);
+    console.log('=== Match Start ===');
+    console.log(`Fighter A: Health=${state.fighterA.health}, Position=(${state.fighterA.position.x}, ${state.fighterA.position.y})`);
+    console.log(`Fighter B: Health=${state.fighterB.health}, Position=(${state.fighterB.position.x}, ${state.fighterB.position.y})`);
     console.log('');
     
-    // Check for match end
-    if (state.fighterA.health <= 0 || state.fighterB.health <= 0) {
-      clearInterval(matchInterval);
+    // Match loop - run until one fighter is defeated
+    const matchInterval = setInterval(() => {
+      // Evaluate actions for both fighters
+      const actionA = evaluateRules(rulesA, state.fighterA, state.fighterB);
+      const actionB = evaluateRules(rulesB, state.fighterB, state.fighterA);
       
-      // Determine winner
-      console.log('=== Match End ===');
-      if (state.fighterA.health > 0 && state.fighterB.health <= 0) {
-        console.log(`Winner: Fighter A with ${state.fighterA.health.toFixed(1)} health remaining`);
-      } else if (state.fighterB.health > 0 && state.fighterA.health <= 0) {
-        console.log(`Winner: Fighter B with ${state.fighterB.health.toFixed(1)} health remaining`);
-      } else {
-        console.log('Draw: Both fighters defeated');
-      }
-      console.log(`Total ticks: ${state.tick}`);
+      // Simulate the tick
+      simulateTick(state, actionA, actionB);
+      
+      // Log current state
+      console.log(`Tick ${state.tick}:`);
+      console.log(`  ${actionA.padEnd(8)} | ${state.fighterA.health.toFixed(1).padStart(5)}`);
+      console.log(`  ${actionB.padEnd(8)} | ${state.fighterB.health.toFixed(1).padStart(5)}`);
       console.log('');
       
-      // Wait 2 seconds and start a new match
-      setTimeout(() => {
-        runSingleMatch(rulesA, rulesB);
-      }, RESTART_DELAY_MS);
-    }
-  }, TICK_INTERVAL_MS);
+      // Check for match end
+      if (state.fighterA.health <= 0 || state.fighterB.health <= 0) {
+        clearInterval(matchInterval);
+        
+        // Determine winner
+        console.log('=== Match End ===');
+        if (state.fighterA.health > 0 && state.fighterB.health <= 0) {
+          console.log(`Winner: Fighter A with ${state.fighterA.health.toFixed(1)} health remaining`);
+        } else if (state.fighterB.health > 0 && state.fighterA.health <= 0) {
+          console.log(`Winner: Fighter B with ${state.fighterB.health.toFixed(1)} health remaining`);
+        } else {
+          console.log('Draw: Both fighters defeated');
+        }
+        console.log(`Total ticks: ${state.tick}`);
+        console.log('');
+        
+        resolve();
+      }
+    }, TICK_INTERVAL_MS);
+  });
 }
 
 /**
  * Start the continuous match loop
  * Runs matches forever, automatically restarting after each match
  */
-export function runMatch(): void {
+export async function runMatch(): Promise<void> {
   // Define rules for fighterA - defensive strategy
   const rulesA: Rule[] = [
     {
@@ -115,7 +115,11 @@ export function runMatch(): void {
     }
   ];
   
-  // Start the first match
-  runSingleMatch(rulesA, rulesB);
+  // Run matches continuously
+  while (true) {
+    await runSingleMatch(rulesA, rulesB);
+    // Wait 2 seconds before starting next match
+    await new Promise(resolve => setTimeout(resolve, RESTART_DELAY_MS));
+  }
 }
 
