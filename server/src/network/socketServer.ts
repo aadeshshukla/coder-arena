@@ -3,6 +3,10 @@ import { MatchState } from '../engine/types';
 
 let io: SocketIOServer | null = null;
 
+// Throttle configuration: limit broadcasts to 10-20 per second
+const MIN_BROADCAST_INTERVAL_MS = 50; // 20 broadcasts/sec max
+let lastBroadcastTime = 0;
+
 /**
  * Initialize and start the WebSocket server
  */
@@ -18,7 +22,9 @@ export function startSocketServer(): void {
     console.log('Client connected');
 
     socket.on('disconnect', () => {
-      // Optional: log disconnection
+      console.log('Client disconnected');
+      // Socket.io automatically cleans up socket references
+      // No manual cleanup needed as we don't store socket references
     });
   });
 
@@ -27,30 +33,53 @@ export function startSocketServer(): void {
 
 /**
  * Broadcast match state to all connected clients
+ * Throttled to prevent network flooding (max 20 broadcasts/sec)
+ * Skips broadcast when no clients are connected
  */
 export function broadcastMatchState(state: MatchState, winner?: string): void {
   if (!io) {
     return; // No socket server initialized, skip broadcasting
   }
 
+  // Guard: Skip if no clients connected (prevents unnecessary serialization)
+  if (io.engine.clientsCount === 0) {
+    return;
+  }
+
+  // Throttle: Skip broadcast if called too frequently (unless match ended)
+  const now = Date.now();
+  const timeSinceLastBroadcast = now - lastBroadcastTime;
+  
+  if (!winner && timeSinceLastBroadcast < MIN_BROADCAST_INTERVAL_MS) {
+    return; // Skip this broadcast to prevent flooding
+  }
+  
+  lastBroadcastTime = now;
+
+  // Build lightweight DTO with only necessary fields
+  // Access nested properties once to avoid repeated lookups
+  const fighterA = state.fighterA;
+  const fighterB = state.fighterB;
+  
   const payload = {
     tick: state.tick,
     fighterA: {
-      health: state.fighterA.health,
-      maxHealth: state.fighterA.maxHealth,
-      position: state.fighterA.position,
-      blocking: state.fighterA.blocking,
-      attacking: state.fighterA.attacking
+      health: fighterA.health,
+      maxHealth: fighterA.maxHealth,
+      position: fighterA.position,
+      blocking: fighterA.blocking,
+      attacking: fighterA.attacking
     },
     fighterB: {
-      health: state.fighterB.health,
-      maxHealth: state.fighterB.maxHealth,
-      position: state.fighterB.position,
-      blocking: state.fighterB.blocking,
-      attacking: state.fighterB.attacking
+      health: fighterB.health,
+      maxHealth: fighterB.maxHealth,
+      position: fighterB.position,
+      blocking: fighterB.blocking,
+      attacking: fighterB.attacking
     },
     ...(winner && { winner })
   };
 
+  // Non-blocking emit (socket.io handles async internally)
   io.emit('match_state', payload);
 }
