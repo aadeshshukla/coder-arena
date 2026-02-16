@@ -66,7 +66,7 @@ function runSingleMatch(rulesA: (Rule | ExtendedRule)[], rulesB: (Rule | Extende
         
         // Determine winner
         console.log('=== Match End ===');
-        let winner: string;
+        let winner: string = 'Draw';
         if (state.fighterA.health > 0 && state.fighterB.health <= 0) {
           winner = 'Fighter A';
           console.log(`Winner: Fighter A with ${state.fighterA.health.toFixed(1)} health remaining`);
@@ -74,7 +74,6 @@ function runSingleMatch(rulesA: (Rule | ExtendedRule)[], rulesB: (Rule | Extende
           winner = 'Fighter B';
           console.log(`Winner: Fighter B with ${state.fighterB.health.toFixed(1)} health remaining`);
         } else {
-          winner = 'Draw';
           console.log('Draw: Both fighters defeated');
         }
         console.log(`Total ticks: ${state.tick}`);

@@ -9,7 +9,7 @@ let io: SocketIOServer | null = null;
 export function startSocketServer(): void {
   io = new SocketIOServer(3001, {
     cors: {
-      origin: "*",
+      origin: "*", // Allow all origins for development/demo purposes
       methods: ["GET", "POST"]
     }
   });
