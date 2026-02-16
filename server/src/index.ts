@@ -6,12 +6,15 @@ import { startSocketServer } from './network/socketServer';
 const app = express();
 const PORT = 3000;
 
+// Determine the client build path based on whether we're in dev or production
+const clientDistPath = path.join(__dirname, '../../../client/dist');
+
 // Serve static files from React build
-app.use(express.static(path.join(__dirname, '../../client/dist')));
+app.use(express.static(clientDistPath));
 
 // All routes serve React app
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
+  res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 app.listen(PORT, () => {
