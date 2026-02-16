@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { MatchState } from '../engine/types';
 
 let io: SocketIOServer | null = null;
+let currentMatchState: MatchState | null = null;
 
 // Throttle configuration: limit broadcasts to 10-20 per second
 const MIN_BROADCAST_INTERVAL_MS = 50; // 20 broadcasts/sec max
@@ -20,6 +21,11 @@ export function startSocketServer(): void {
 
   io.on('connection', (socket) => {
     console.log('Client connected');
+    
+    // CRITICAL: Send current match state immediately to sync new viewer
+    if (currentMatchState) {
+      socket.emit('match_state', currentMatchState);
+    }
 
     socket.on('disconnect', () => {
       console.log('Client disconnected');
@@ -79,6 +85,9 @@ export function broadcastMatchState(state: MatchState, winner?: string): void {
     },
     ...(winner && { winner })
   };
+
+  // Store current state for late joiners
+  currentMatchState = payload as unknown as MatchState;
 
   // Non-blocking emit (socket.io handles async internally)
   io.emit('match_state', payload);
