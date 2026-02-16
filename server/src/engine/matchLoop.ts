@@ -3,6 +3,7 @@ import { Fighter, MatchState, ExtendedRule } from './types';
 import { evaluateRules } from './ruleEngine';
 import { simulateTick } from './simulator';
 import { getDefaultRules } from './defaultBehavior';
+import { broadcastMatchState } from '../network/socketServer';
 
 // Match configuration
 const TICK_INTERVAL_MS = 100;
@@ -50,6 +51,9 @@ function runSingleMatch(rulesA: (Rule | ExtendedRule)[], rulesB: (Rule | Extende
       // Simulate the tick
       simulateTick(state, actionA, actionB);
       
+      // Broadcast state to connected clients
+      broadcastMatchState(state);
+      
       // Log current state
       console.log(`Tick ${state.tick}:`);
       console.log(`  ${actionA.padEnd(8)} | ${state.fighterA.health.toFixed(1).padStart(5)}`);
@@ -62,15 +66,21 @@ function runSingleMatch(rulesA: (Rule | ExtendedRule)[], rulesB: (Rule | Extende
         
         // Determine winner
         console.log('=== Match End ===');
+        let winner: string = 'Draw';
         if (state.fighterA.health > 0 && state.fighterB.health <= 0) {
+          winner = 'Fighter A';
           console.log(`Winner: Fighter A with ${state.fighterA.health.toFixed(1)} health remaining`);
         } else if (state.fighterB.health > 0 && state.fighterA.health <= 0) {
+          winner = 'Fighter B';
           console.log(`Winner: Fighter B with ${state.fighterB.health.toFixed(1)} health remaining`);
         } else {
           console.log('Draw: Both fighters defeated');
         }
         console.log(`Total ticks: ${state.tick}`);
         console.log('');
+        
+        // Broadcast final state with winner
+        broadcastMatchState(state, winner);
         
         resolve();
       }
