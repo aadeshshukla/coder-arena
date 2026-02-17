@@ -1,6 +1,6 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Player } from '../core/Player';
-import { LobbyState } from '../../shared/types/events';
+import { LobbyState } from '../../../shared/types/events';
 
 export class LobbyManager {
   private io: SocketIOServer;

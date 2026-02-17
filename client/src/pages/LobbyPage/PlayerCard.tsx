@@ -8,13 +8,13 @@ interface PlayerCardProps {
   isCurrentUser?: boolean;
 }
 
-const Card = styled.div<{ isCurrentUser?: boolean }>`
-  background: ${props => props.isCurrentUser ? theme.colors.bg.tertiary : theme.colors.bg.secondary};
-  border: 2px solid ${props => props.isCurrentUser ? theme.colors.accent.success : theme.colors.bg.tertiary};
+const Card = styled.div<{ $isCurrentUser?: boolean }>`
+  background: ${props => props.$isCurrentUser ? theme.colors.bg.tertiary : theme.colors.bg.secondary};
+  border: 2px solid ${props => props.$isCurrentUser ? theme.colors.accent.success : theme.colors.bg.tertiary};
   border-radius: 12px;
   padding: 20px;
   transition: all 0.3s ease;
-  box-shadow: ${props => props.isCurrentUser ? `0 0 20px ${theme.colors.accent.success}44` : 'none'};
+  box-shadow: ${props => props.$isCurrentUser ? `0 0 20px ${theme.colors.accent.success}44` : 'none'};
   
   &:hover {
     transform: translateY(-2px);
@@ -67,7 +67,7 @@ const CurrentUserBadge = styled.div`
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, isCurrentUser }) => {
   return (
-    <Card isCurrentUser={isCurrentUser}>
+    <Card $isCurrentUser={isCurrentUser}>
       <Username>
         {player.username}
         {isCurrentUser && <CurrentUserBadge>You</CurrentUserBadge>}

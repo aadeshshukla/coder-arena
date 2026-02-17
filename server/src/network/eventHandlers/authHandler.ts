@@ -6,7 +6,7 @@ import {
   AuthLoginResponse, 
   AuthValidateRequest, 
   AuthValidateResponse 
-} from '../../../shared/types/events';
+} from '../../../../shared/types/events';
 
 export function registerAuthHandlers(
   socket: Socket,

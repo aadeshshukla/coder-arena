@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import { AuthManager } from '../../managers/AuthManager';
 import { LobbyManager } from '../../managers/LobbyManager';
-import { LobbyJoinRequest } from '../../../shared/types/events';
+import { LobbyJoinRequest } from '../../../../shared/types/events';
 
 export function registerLobbyHandlers(
   socket: Socket,

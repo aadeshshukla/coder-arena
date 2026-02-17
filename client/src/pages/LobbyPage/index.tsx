@@ -98,7 +98,7 @@ const LobbyPage: React.FC = () => {
           <Subtitle>Welcome, {user?.username}!</Subtitle>
           <PlayerCount>{playerCount} player{playerCount !== 1 ? 's' : ''} online</PlayerCount>
         </HeaderLeft>
-        <Button variant="secondary" onClick={handleLogout}>
+        <Button $variant="secondary" onClick={handleLogout}>
           Logout
         </Button>
       </Header>
