@@ -20,7 +20,7 @@ export class Player {
   public connectedAt: number;
 
   constructor(username: string, socketId: string) {
-    this.id = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.id = `player_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     this.username = username;
     this.socketId = socketId;
     this.status = PlayerStatus.ONLINE;

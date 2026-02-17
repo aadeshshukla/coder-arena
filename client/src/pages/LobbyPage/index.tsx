@@ -62,7 +62,7 @@ const LobbyPage: React.FC = () => {
   const { user, logout } = useAuth();
   const { socket } = useSocket();
   const navigate = useNavigate();
-  const { players, playerCount, updatePlayers } = useLobbyStore();
+  const { players, playerCount, setPlayers } = useLobbyStore();
 
   useEffect(() => {
     if (!socket || !user) return;
@@ -76,14 +76,14 @@ const LobbyPage: React.FC = () => {
 
     // Listen for lobby updates
     socket.on('lobby:update', (state: LobbyState) => {
-      updatePlayers(state.players);
+      setPlayers(state.players);
     });
 
     return () => {
       socket.off('lobby:update');
       socket.emit('lobby:leave');
     };
-  }, [socket, user, updatePlayers]);
+  }, [socket, user, setPlayers]);
 
   const handleLogout = () => {
     logout();

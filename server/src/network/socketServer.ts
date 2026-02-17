@@ -27,7 +27,7 @@ export function startSocketServer(): void {
 
   // Initialize managers
   authManager = new AuthManager();
-  lobbyManager = new LobbyManager(io);
+  lobbyManager = new LobbyManager(io, authManager);
 
   io.on('connection', (socket) => {
     console.log('Client connected');

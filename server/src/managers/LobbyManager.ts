@@ -1,13 +1,16 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Player } from '../core/Player';
 import { LobbyState } from '../../../shared/types/events';
+import { AuthManager } from './AuthManager';
 
 export class LobbyManager {
   private io: SocketIOServer;
+  private authManager: AuthManager;
   private lobbyPlayers: Set<string>; // Set of player IDs in the lobby
 
-  constructor(io: SocketIOServer) {
+  constructor(io: SocketIOServer, authManager: AuthManager) {
     this.io = io;
+    this.authManager = authManager;
     this.lobbyPlayers = new Set();
   }
 
@@ -40,7 +43,8 @@ export class LobbyManager {
   /**
    * Get current lobby state
    */
-  getLobbyState(allPlayers: Player[]): LobbyState {
+  getLobbyState(): LobbyState {
+    const allPlayers = this.authManager.getAllPlayers();
     // Filter to only include players who are in the lobby
     const lobbyPlayersList = allPlayers.filter(p => this.lobbyPlayers.has(p.id));
     
@@ -53,11 +57,9 @@ export class LobbyManager {
   /**
    * Broadcast lobby state to all players in the lobby room
    */
-  broadcastLobbyUpdate(allPlayers?: Player[]): void {
-    if (allPlayers) {
-      const lobbyState = this.getLobbyState(allPlayers);
-      this.io.to('lobby').emit('lobby:update', lobbyState);
-    }
+  broadcastLobbyUpdate(): void {
+    const lobbyState = this.getLobbyState();
+    this.io.to('lobby').emit('lobby:update', lobbyState);
   }
 
   /**

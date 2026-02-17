@@ -23,11 +23,8 @@ export function registerLobbyHandlers(
       lobbyManager.joinLobby(result.player, socket);
       
       // Send current lobby state to the joining player
-      const lobbyState = lobbyManager.getLobbyState(authManager.getAllPlayers());
+      const lobbyState = lobbyManager.getLobbyState();
       socket.emit('lobby:update', lobbyState);
-      
-      // Broadcast to all other players in lobby
-      lobbyManager.broadcastLobbyUpdate(authManager.getAllPlayers());
       
       if (callback) {
         callback({ success: true });
@@ -47,9 +44,6 @@ export function registerLobbyHandlers(
     if (player) {
       lobbyManager.leaveLobby(player.id);
       socket.leave('lobby');
-      
-      // Broadcast lobby update
-      lobbyManager.broadcastLobbyUpdate(authManager.getAllPlayers());
     }
   });
 
@@ -59,7 +53,7 @@ export function registerLobbyHandlers(
   socket.on('lobby:request_state', () => {
     const player = authManager.getPlayerBySocketId(socket.id);
     if (player && lobbyManager.isInLobby(player.id)) {
-      const lobbyState = lobbyManager.getLobbyState(authManager.getAllPlayers());
+      const lobbyState = lobbyManager.getLobbyState();
       socket.emit('lobby:update', lobbyState);
     }
   });

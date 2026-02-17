@@ -71,9 +71,6 @@ export function registerAuthHandlers(
       lobbyManager.leaveLobby(player.id);
       authManager.logout(player.id);
       console.log(`User ${player.username} logged out`);
-      
-      // Broadcast lobby update
-      lobbyManager.broadcastLobbyUpdate(authManager.getAllPlayers());
     }
   });
 
@@ -86,9 +83,6 @@ export function registerAuthHandlers(
       lobbyManager.leaveLobby(player.id);
       authManager.logout(player.id);
       console.log(`User ${player.username} disconnected`);
-      
-      // Broadcast lobby update
-      lobbyManager.broadcastLobbyUpdate(authManager.getAllPlayers());
     }
   });
 }
