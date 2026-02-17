@@ -1,8 +1,14 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { MatchState } from '../engine/types';
+import { AuthManager } from '../managers/AuthManager';
+import { LobbyManager } from '../managers/LobbyManager';
+import { registerAuthHandlers } from './eventHandlers/authHandler';
+import { registerLobbyHandlers } from './eventHandlers/lobbyHandler';
 
 let io: SocketIOServer | null = null;
 let currentMatchState: MatchState | null = null;
+let authManager: AuthManager | null = null;
+let lobbyManager: LobbyManager | null = null;
 
 // Throttle configuration: limit broadcasts to 10-20 per second
 const MIN_BROADCAST_INTERVAL_MS = 50; // 20 broadcasts/sec max
@@ -19,12 +25,22 @@ export function startSocketServer(): void {
     }
   });
 
+  // Initialize managers
+  authManager = new AuthManager();
+  lobbyManager = new LobbyManager(io);
+
   io.on('connection', (socket) => {
     console.log('Client connected');
     
     // CRITICAL: Send current match state immediately to sync new viewer
     if (currentMatchState) {
       socket.emit('match_state', currentMatchState);
+    }
+
+    // Register auth and lobby event handlers
+    if (authManager && lobbyManager) {
+      registerAuthHandlers(socket, authManager, lobbyManager);
+      registerLobbyHandlers(socket, authManager, lobbyManager);
     }
 
     socket.on('disconnect', () => {
