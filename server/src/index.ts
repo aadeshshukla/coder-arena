@@ -22,9 +22,13 @@ import { registerRematchHandlers } from './network/eventHandlers/rematchHandler'
 const app = express();
 const server = http.createServer(app);
 
+// Configuration from environment variables
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const PORT = parseInt(process.env.PORT || '3001', 10);
+
 // CORS for client
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: CLIENT_URL,
   credentials: true
 }));
 
@@ -33,7 +37,7 @@ app.use(express.json());
 // Socket.IO
 const io = new SocketIOServer(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: CLIENT_URL,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -82,7 +86,6 @@ app.get('/health', (req, res) => {
 });
 
 // Start
-const PORT = 3001;
 server.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
   console.log(`🌐 WebSocket ready`);
