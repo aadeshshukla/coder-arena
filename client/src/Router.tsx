@@ -6,6 +6,7 @@ import EditorPage from './pages/EditorPage';
 import BattlePage from './pages/BattlePage';
 import ResultsPage from './pages/ResultsPage';
 import SpectatorPage from './pages/SpectatorPage';
+import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './contexts/AuthContext';
 
 export default function Router() {
@@ -37,6 +38,7 @@ export default function Router() {
         <Route path="/battle/:matchId" element={isAuthenticated ? <BattlePage /> : <Navigate to="/" />} />
         <Route path="/results/:matchId" element={isAuthenticated ? <ResultsPage /> : <Navigate to="/" />} />
         <Route path="/spectator" element={isAuthenticated ? <SpectatorPage /> : <Navigate to="/" />} />
+        <Route path="/profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );
