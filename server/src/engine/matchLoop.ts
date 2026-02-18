@@ -1,3 +1,17 @@
+/**
+ * LEGACY/DEMO CODE - NOT USED IN PRODUCTION
+ * 
+ * This file contains the original POC auto-simulation code.
+ * It is kept for reference and testing purposes only.
+ * 
+ * The production match system now uses:
+ * - Match class (core/Match.ts) for match lifecycle
+ * - MatchManager (managers/MatchManager.ts) for match coordination
+ * - Event-driven architecture triggered by player actions
+ * 
+ * DO NOT call runMatch() from index.ts or any production code.
+ */
+
 import { Rule } from '../../../shared/types/rules';
 import { Fighter, MatchState, ExtendedRule } from './types';
 import { evaluateRules } from './ruleEngine';
