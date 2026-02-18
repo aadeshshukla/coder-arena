@@ -203,8 +203,8 @@ const EditorPage: React.FC = () => {
     // Listen for match start
     socket.on('match:start', (data: MatchStartEvent) => {
       console.log('Match starting:', data);
-      // TODO: Navigate to battle page in Phase 4
-      alert('Match is starting! (Battle phase not yet implemented)');
+      // Navigate to battle page
+      navigate(`/battle/${data.matchId}`);
     });
 
     return () => {
