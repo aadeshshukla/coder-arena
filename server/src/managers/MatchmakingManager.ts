@@ -25,7 +25,7 @@ export class MatchmakingManager {
    * Add a player to the matchmaking queue
    */
   joinQueue(playerId: string): { success: boolean; position: number; error?: string } {
-    const player = this.authManager.getPlayerById(playerId);
+    const player = this.authManager.getPlayer(playerId);
     
     if (!player) {
       return { success: false, position: 0, error: 'Player not found' };
@@ -61,7 +61,7 @@ export class MatchmakingManager {
 
     this.queue.splice(index, 1);
     
-    const player = this.authManager.getPlayerById(playerId);
+    const player = this.authManager.getPlayer(playerId);
     if (player) {
       player.status = PlayerStatus.ONLINE;
       console.log(`Player ${player.username} left queue`);
@@ -83,8 +83,8 @@ export class MatchmakingManager {
     const playerAId = this.queue.shift()!;
     const playerBId = this.queue.shift()!;
 
-    const playerA = this.authManager.getPlayerById(playerAId);
-    const playerB = this.authManager.getPlayerById(playerBId);
+    const playerA = this.authManager.getPlayer(playerAId);
+    const playerB = this.authManager.getPlayer(playerBId);
 
     if (!playerA || !playerB) {
       console.error('Player not found when matching');
@@ -116,7 +116,7 @@ export class MatchmakingManager {
    * Create a private room
    */
   createRoom(hostPlayerId: string): { success: boolean; roomCode?: string; error?: string } {
-    const player = this.authManager.getPlayerById(hostPlayerId);
+    const player = this.authManager.getPlayer(hostPlayerId);
     
     if (!player) {
       return { success: false, error: 'Player not found' };
@@ -150,7 +150,7 @@ export class MatchmakingManager {
     match?: Match; 
     error?: string 
   } {
-    const player = this.authManager.getPlayerById(guestPlayerId);
+    const player = this.authManager.getPlayer(guestPlayerId);
     
     if (!player) {
       return { success: false, error: 'Player not found' };
@@ -179,7 +179,7 @@ export class MatchmakingManager {
     room.addGuest(guestPlayerId);
 
     // Get host player
-    const hostPlayer = this.authManager.getPlayerById(room.hostPlayerId);
+    const hostPlayer = this.authManager.getPlayer(room.hostPlayerId);
     
     if (!hostPlayer) {
       return { success: false, error: 'Host player not found' };
@@ -224,7 +224,7 @@ export class MatchmakingManager {
     
     // Send to each player in queue with their position
     this.queue.forEach((playerId, index) => {
-      const player = this.authManager.getPlayerById(playerId);
+      const player = this.authManager.getPlayer(playerId);
       if (player) {
         this.io.to(player.socketId).emit('queue:update', {
           queueSize,

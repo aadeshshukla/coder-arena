@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import { theme } from '../../theme';
 
 interface ButtonProps {
-  $variant?: 'primary' | 'secondary';
+  $variant?: 'primary' | 'secondary' | 'success';
 }
 
 const Button = styled.button<ButtonProps>`
@@ -13,7 +13,10 @@ const Button = styled.button<ButtonProps>`
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: ${props => props.$variant === 'secondary' ? theme.colors.bg.tertiary : theme.colors.accent.success};
+  background: ${props => 
+    props.$variant === 'secondary' ? theme.colors.bg.tertiary :
+    props.$variant === 'success' ? theme.colors.accent.success :
+    theme.colors.accent.success};
   color: ${props => props.$variant === 'secondary' ? theme.colors.text.primary : theme.colors.bg.primary};
   
   &:hover {
