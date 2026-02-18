@@ -8,7 +8,7 @@ interface RematchRequest {
 }
 
 export function useRematch() {
-  const socket = useSocket();
+  const { socket } = useSocket();
   const [rematchRequest, setRematchRequest] = useState<RematchRequest | null>(null);
   const [rematchSent, setRematchSent] = useState(false);
 

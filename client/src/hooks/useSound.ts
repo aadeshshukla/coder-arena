@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 
 // Sound effects - using data URIs for simplicity (beep sounds)
@@ -11,7 +11,6 @@ const sounds = {
 
 export function useSound() {
   const { settings } = useSettingsStore();
-  const audioContext = useRef<AudioContext | null>(null);
 
   const playSound = useCallback((soundName: keyof typeof sounds) => {
     if (!settings.soundEnabled) return;

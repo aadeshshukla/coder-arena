@@ -12,6 +12,15 @@ const clientDistPath = path.join(__dirname, '../../../client/dist');
 // Serve static files from React build
 app.use(express.static(clientDistPath));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: Date.now(),
+    uptime: process.uptime()
+  });
+});
+
 // All routes serve React app
 app.get('*', (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));

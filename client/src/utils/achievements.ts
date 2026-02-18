@@ -2,7 +2,7 @@ import { PlayerStats } from '../stores/statsStore';
 import { useAchievementsStore } from '../stores/achievementsStore';
 
 export function checkAchievements(stats: PlayerStats): string[] {
-  const { achievements, unlockAchievement, isUnlocked } = useAchievementsStore.getState();
+  const { unlockAchievement, isUnlocked } = useAchievementsStore.getState();
   const newlyUnlocked: string[] = [];
 
   // First Blood - Win first match
