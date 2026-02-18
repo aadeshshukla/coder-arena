@@ -1,10 +1,15 @@
 import { Socket } from 'socket.io';
 import { RematchManager } from '../../managers/RematchManager';
 
-export function registerRematchHandlers(socket: Socket, rematchManager: RematchManager) {
+// Extend Socket type to include playerId
+interface AuthenticatedSocket extends Socket {
+  playerId?: string;
+}
+
+export function registerRematchHandlers(socket: AuthenticatedSocket, rematchManager: RematchManager) {
   // Send rematch request
   socket.on('rematch:send', ({ toPlayerId }: { toPlayerId: string }) => {
-    const playerId = (socket as any).playerId;
+    const playerId = socket.playerId;
     if (!playerId) return;
 
     const success = rematchManager.sendRematchRequest(playerId, toPlayerId);
@@ -15,7 +20,7 @@ export function registerRematchHandlers(socket: Socket, rematchManager: RematchM
 
   // Accept rematch
   socket.on('rematch:accept', ({ fromPlayerId }: { fromPlayerId: string }) => {
-    const playerId = (socket as any).playerId;
+    const playerId = socket.playerId;
     if (!playerId) return;
 
     const success = rematchManager.acceptRematch(playerId, fromPlayerId);
@@ -26,7 +31,7 @@ export function registerRematchHandlers(socket: Socket, rematchManager: RematchM
 
   // Decline rematch
   socket.on('rematch:decline', ({ fromPlayerId }: { fromPlayerId: string }) => {
-    const playerId = (socket as any).playerId;
+    const playerId = socket.playerId;
     if (!playerId) return;
 
     rematchManager.declineRematch(playerId, fromPlayerId);

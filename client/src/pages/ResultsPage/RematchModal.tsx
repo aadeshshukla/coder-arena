@@ -18,9 +18,12 @@ export default function RematchModal({
   const [countdown, setCountdown] = useState(timeoutSeconds);
 
   useEffect(() => {
+    if (countdown <= 0) return; // Already at 0, stop
+    
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
+          clearInterval(timer);
           onDecline();
           return 0;
         }

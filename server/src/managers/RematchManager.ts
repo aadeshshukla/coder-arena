@@ -31,7 +31,17 @@ export class RematchManager {
    */
   unregisterPlayer(playerId: string): void {
     this.playerSockets.delete(playerId);
-    // Don't delete username as it might be needed for pending requests
+    
+    // Clean up username after a delay (in case of pending requests)
+    setTimeout(() => {
+      // Only delete if no pending requests for this player
+      const hasPendingRequests = Array.from(this.pendingRematches.values())
+        .some(req => req.fromPlayerId === playerId || req.toPlayerId === playerId);
+      
+      if (!hasPendingRequests) {
+        this.playerNames.delete(playerId);
+      }
+    }, this.REMATCH_TIMEOUT);
   }
   
   /**

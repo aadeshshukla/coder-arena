@@ -8,7 +8,7 @@ export default function ToastContainer() {
   return (
     <Container>
       {toasts.map((toast, index) => (
-        <ToastWrapper key={toast.id} style={{ top: `${20 + index * 80}px` }}>
+        <ToastWrapper key={toast.id} $index={index}>
           <Toast
             message={toast.message}
             type={toast.type}
@@ -28,9 +28,10 @@ const Container = styled.div`
   pointer-events: none;
 `;
 
-const ToastWrapper = styled.div`
+const ToastWrapper = styled.div<{ $index: number }>`
   position: absolute;
   right: 0;
+  top: ${props => 20 + props.$index * 80}px;
   pointer-events: all;
   transition: top 0.3s ease;
 `;

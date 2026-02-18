@@ -14,7 +14,7 @@ const ResultsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { recordMatchResult, stats } = useStatsStore();
+  const { recordMatchResult } = useStatsStore();
   const { playSound } = useSound();
   const { sendRematchRequest, rematchRequest, acceptRematch, declineRematch } = useRematch();
   
@@ -33,8 +33,8 @@ const ResultsPage: React.FC = () => {
     const playerStats = isPlayerA ? results.statsA : results.statsB;
     const opponentName = isPlayerA ? 'Opponent' : 'Opponent';
 
-    // Record match result
-    recordMatchResult({
+    // Record match result and get updated stats
+    const matchEntry = {
       matchId: results.matchId,
       opponent: opponentName,
       result: isDraw ? 'draw' : isWinner ? 'win' : 'loss',
@@ -42,13 +42,18 @@ const ResultsPage: React.FC = () => {
       damageTaken: playerStats.damageTaken,
       duration: results.duration,
       timestamp: Date.now()
-    });
+    } as const;
+    
+    recordMatchResult(matchEntry);
 
     // Play sound
     playSound(isWinner ? 'victory' : 'defeat');
 
-    // Check achievements
-    checkAchievements(stats);
+    // Check achievements with the current stats after recording
+    // Note: Since Zustand updates are synchronous, stats will be updated immediately
+    setTimeout(() => {
+      checkAchievements(useStatsStore.getState().stats);
+    }, 0);
   }, [results, user]);
 
   // Listen for rematch requests

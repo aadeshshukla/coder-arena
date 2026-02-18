@@ -6,11 +6,16 @@ export interface Toast {
   type: 'success' | 'error' | 'info' | 'warning';
 }
 
+let idCounter = 0;
+
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'info') => {
-    const id = Math.random().toString(36).substr(2, 9);
+    // Use crypto.randomUUID if available, otherwise fallback to counter
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : `toast-${Date.now()}-${++idCounter}`;
     const newToast: Toast = { id, message, type };
     
     setToasts(prev => [...prev, newToast]);
