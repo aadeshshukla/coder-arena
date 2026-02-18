@@ -40,6 +40,12 @@ const HeaderLeft = styled.div`
   gap: 8px;
 `;
 
+const HeaderRight = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+`;
+
 const Title = styled.h1`
   color: ${theme.colors.accent.success};
   font-size: 28px;
@@ -277,9 +283,14 @@ const LobbyPage: React.FC = () => {
           <Subtitle>Welcome, {user?.username}!</Subtitle>
           <PlayerCount>{playerCount} player{playerCount !== 1 ? 's' : ''} online</PlayerCount>
         </HeaderLeft>
-        <Button $variant="secondary" onClick={handleLogout}>
-          Logout
-        </Button>
+        <HeaderRight>
+          <Button $variant="primary" onClick={() => navigate('/spectator')}>
+            👁 Watch Battles
+          </Button>
+          <Button $variant="secondary" onClick={handleLogout}>
+            Logout
+          </Button>
+        </HeaderRight>
       </Header>
       
       <Content>

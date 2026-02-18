@@ -3,6 +3,7 @@ import { Match } from '../core/Match';
 import { AuthManager } from './AuthManager';
 import { CASLParser } from '../engine/casl/CASLParser';
 import { CASLValidator } from '../engine/casl/CASLValidator';
+import { BattleMatchState, MatchResults } from '../../../shared/types/match';
 
 export class MatchManager {
   private io: SocketIOServer;
@@ -177,7 +178,68 @@ export class MatchManager {
 
     console.log(`Match ${matchId} started (entering battle phase)`);
 
-    // TODO: In Phase 4, this would trigger the actual battle simulation
+    // Start the actual battle simulation
+    match.startBattleSimulation(
+      // On broadcast
+      (state: BattleMatchState) => {
+        this.broadcastMatchState(matchId, state);
+      },
+      // On finish
+      (results: MatchResults) => {
+        this.handleMatchFinish(matchId, results);
+      }
+    );
+  }
+  
+  /**
+   * Broadcast match state to players and spectators
+   */
+  private broadcastMatchState(matchId: string, state: BattleMatchState): void {
+    const match = this.matches.get(matchId);
+    if (!match) return;
+    
+    // Broadcast to players
+    this.io.to(match.playerA.socketId).emit('match:state', state);
+    this.io.to(match.playerB.socketId).emit('match:state', state);
+    
+    // Broadcast to spectators
+    this.io.to(`match:${matchId}`).emit('match:state', state);
+  }
+  
+  /**
+   * Handle match finish
+   */
+  private handleMatchFinish(matchId: string, results: MatchResults): void {
+    const match = this.matches.get(matchId);
+    if (!match) return;
+    
+    // Emit results to players
+    this.io.to(match.playerA.socketId).emit('match:ended', results);
+    this.io.to(match.playerB.socketId).emit('match:ended', results);
+    
+    // Emit to spectators
+    this.io.to(`match:${matchId}`).emit('match:ended', results);
+    
+    // Clean up match after a delay
+    setTimeout(() => {
+      this.matches.delete(matchId);
+      console.log(`Match ${matchId} cleaned up`);
+    }, 5000);
+  }
+  
+  /**
+   * Get all matches (for spectator list)
+   */
+  getAllMatches(): Match[] {
+    return Array.from(this.matches.values());
+  }
+  
+  /**
+   * Get battle state for a match
+   */
+  getMatchBattleState(matchId: string): BattleMatchState | undefined {
+    const match = this.matches.get(matchId);
+    return match?.getBattleState();
   }
 
   /**
