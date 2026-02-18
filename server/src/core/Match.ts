@@ -305,6 +305,13 @@ export class Match {
   }
   
   /**
+   * Calculate damage after applying block reduction
+   */
+  private calculateDamage(baseDamage: number, isBlocked: boolean): number {
+    return isBlocked ? baseDamage * BLOCK_DAMAGE_REDUCTION : baseDamage;
+  }
+  
+  /**
    * Simulate a single tick of combat
    */
   private simulateTick(actionA: ActionType, actionB: ActionType): void {
@@ -325,9 +332,8 @@ export class Match {
     
     // Process Fighter A's action
     if (actionA === 'ATTACK' && distance <= ATTACK_RANGE && fighterA.attackCooldown === 0) {
-      let damage = BASE_DAMAGE;
+      const damage = this.calculateDamage(BASE_DAMAGE, actionB === 'BLOCK');
       if (actionB === 'BLOCK') {
-        damage = damage * BLOCK_DAMAGE_REDUCTION;
         event = { type: 'BLOCK', attacker: this.playerA.id, target: this.playerB.id, damage };
       } else {
         event = { type: 'DAMAGE', attacker: this.playerA.id, target: this.playerB.id, damage };
@@ -347,9 +353,8 @@ export class Match {
     
     // Process Fighter B's action
     if (actionB === 'ATTACK' && distance <= ATTACK_RANGE && fighterB.attackCooldown === 0) {
-      let damage = BASE_DAMAGE;
+      const damage = this.calculateDamage(BASE_DAMAGE, actionA === 'BLOCK');
       if (actionA === 'BLOCK') {
-        damage = damage * BLOCK_DAMAGE_REDUCTION;
         if (!event) event = { type: 'BLOCK', attacker: this.playerB.id, target: this.playerA.id, damage };
       } else {
         if (!event) event = { type: 'DAMAGE', attacker: this.playerB.id, target: this.playerA.id, damage };

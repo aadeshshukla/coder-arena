@@ -61,6 +61,13 @@ const FighterSprite: React.FC<FighterSpriteProps> = ({ fighter, side }) => {
 
   const color = side === 'A' ? '#00ff88' : '#00d4ff';
 
+  // Calculate fighter transform
+  const getTransform = () => {
+    const scale = fighter.attacking ? attackSpring.scale.get() : idleSpring.scale.get();
+    const rotateY = side === 'A' ? 0 : 180;
+    return `scale(${scale}) rotateY(${rotateY}deg)`;
+  };
+
   return (
     <Container
       style={{
@@ -70,9 +77,7 @@ const FighterSprite: React.FC<FighterSpriteProps> = ({ fighter, side }) => {
     >
       <FighterBody
         style={{
-          transform: attackSpring.scale.to(s => 
-            `scale(${s * (fighter.attacking ? 1 : idleSpring.scale.get())}) rotateY(${side === 'A' ? 0 : 180}deg)`
-          )
+          transform: attackSpring.scale.to(() => getTransform())
         }}
         $color={color}
         $hurt={isHurt}
