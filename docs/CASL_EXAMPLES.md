@@ -366,7 +366,12 @@ STRATEGY CounterPuncher {
   
   RULE "Critical health defense" {
     WHEN self.health < 20
-     OR self.health < 40 AND enemy.attackCooldown == 0
+    DO BLOCK
+  }
+  
+  RULE "Defensive block when hurt" {
+    WHEN self.health < 40
+     AND enemy.attackCooldown == 0
     DO BLOCK
   }
   

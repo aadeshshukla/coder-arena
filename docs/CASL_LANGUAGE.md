@@ -277,7 +277,23 @@ RULE "Block when endangered" {
 ```
 
 ### 6. Use comments
-While CASL doesn't officially support comments in the language itself, you can use descriptive rule names to document your strategy:
+CASL supports both single-line and multi-line comments:
+```javascript
+// Single-line comment
+STRATEGY CommentedBot {
+  /* Multi-line comment
+     explaining the strategy */
+  
+  RULE "Attack rule" {
+    WHEN distance < 3 // Check if close enough
+    DO ATTACK
+  }
+  
+  DEFAULT IDLE
+}
+```
+
+You can also use descriptive rule names to document your strategy:
 ```javascript
 RULE "Aggressive finish: low enemy health, close range, attack ready" {
   WHEN enemy.health < 30
