@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import { BattleMatchState, MatchResults } from '../../../shared/types/match';
 

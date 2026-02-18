@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { useSocket } from '../../contexts/SocketContext';
 import { useMatchState } from '../../hooks/useMatchState';
 import FighterSprite from '../../components/arena/FighterSprite';
 import HealthBar from '../../components/arena/HealthBar';
@@ -16,7 +15,7 @@ const ARENA_HEIGHT = 400;
 const BattlePage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { matchState, results, isLoading } = useMatchState({
+  const { matchState, isLoading } = useMatchState({
     matchId,
     onMatchEnd: (endResults) => {
       // Navigate to results page after a short delay
@@ -108,15 +107,11 @@ const BattlePage: React.FC = () => {
           <FighterSprite
             fighter={matchState.fighterA}
             side="A"
-            arenaWidth={ARENA_WIDTH}
-            arenaHeight={ARENA_HEIGHT}
           />
           
           <FighterSprite
             fighter={matchState.fighterB}
             side="B"
-            arenaWidth={ARENA_WIDTH}
-            arenaHeight={ARENA_HEIGHT}
           />
 
           {effects.map(({ id, event }) => {

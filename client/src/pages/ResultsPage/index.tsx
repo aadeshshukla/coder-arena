@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { MatchResults } from '../../../../shared/types/match';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,8 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const ResultsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { matchId } = useParams<{ matchId: string }>();
-  const { player } = useAuth();
+  const { user } = useAuth();
   
   const results = location.state?.results as MatchResults | undefined;
 
@@ -21,7 +20,9 @@ const ResultsPage: React.FC = () => {
     );
   }
 
-  const isPlayerA = player?.id === results.statsA.finalPosition ? true : false;
+  // Determine if current user is player A or B based on winner data
+  const isWinner = results.winnerPlayer?.id === user?.id;
+  const isPlayerA = results.winnerPlayer ? (results.winner === 'A' && isWinner) || (results.winner === 'B' && !isWinner) : true;
   const won = (isPlayerA && results.winner === 'A') || (!isPlayerA && results.winner === 'B');
   const playerStats = isPlayerA ? results.statsA : results.statsB;
   const opponentStats = isPlayerA ? results.statsB : results.statsA;

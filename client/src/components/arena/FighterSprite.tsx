@@ -6,8 +6,6 @@ import { FighterState } from '../../../../shared/types/match';
 interface FighterSpriteProps {
   fighter: FighterState;
   side: 'A' | 'B';
-  arenaWidth: number;
-  arenaHeight: number;
 }
 
 const FIGHTER_WIDTH = 60;
@@ -15,7 +13,7 @@ const FIGHTER_HEIGHT = 80;
 const UNITS_TO_PX_X = 40; // 800px / 20 units
 const UNITS_TO_PX_Y = 40; // 400px / 10 units
 
-const FighterSprite: React.FC<FighterSpriteProps> = ({ fighter, side, arenaWidth, arenaHeight }) => {
+const FighterSprite: React.FC<FighterSpriteProps> = ({ fighter, side }) => {
   const [prevHealth, setPrevHealth] = useState(fighter.health);
   const [isHurt, setIsHurt] = useState(false);
 
