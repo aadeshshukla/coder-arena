@@ -4,10 +4,12 @@ import { AuthManager } from '../managers/AuthManager';
 import { LobbyManager } from '../managers/LobbyManager';
 import { MatchmakingManager } from '../managers/MatchmakingManager';
 import { MatchManager } from '../managers/MatchManager';
+import { SpectatorManager } from '../managers/SpectatorManager';
 import { registerAuthHandlers } from './eventHandlers/authHandler';
 import { registerLobbyHandlers } from './eventHandlers/lobbyHandler';
 import { registerMatchmakingHandlers } from './eventHandlers/matchmakingHandler';
 import { registerMatchHandlers } from './eventHandlers/matchHandler';
+import { registerSpectatorHandlers } from './eventHandlers/spectatorHandler';
 
 let io: SocketIOServer | null = null;
 let currentMatchState: MatchState | null = null;
@@ -15,6 +17,7 @@ let authManager: AuthManager | null = null;
 let lobbyManager: LobbyManager | null = null;
 let matchmakingManager: MatchmakingManager | null = null;
 let matchManager: MatchManager | null = null;
+let spectatorManager: SpectatorManager | null = null;
 
 // Throttle configuration: limit broadcasts to 10-20 per second
 const MIN_BROADCAST_INTERVAL_MS = 50; // 20 broadcasts/sec max
@@ -36,6 +39,7 @@ export function startSocketServer(): void {
   lobbyManager = new LobbyManager(io, authManager);
   matchmakingManager = new MatchmakingManager(io, authManager);
   matchManager = new MatchManager(io, authManager);
+  spectatorManager = new SpectatorManager(io, matchManager);
 
   io.on('connection', (socket) => {
     console.log('Client connected');
@@ -46,11 +50,12 @@ export function startSocketServer(): void {
     }
 
     // Register event handlers
-    if (authManager && lobbyManager && matchmakingManager && matchManager) {
+    if (authManager && lobbyManager && matchmakingManager && matchManager && spectatorManager) {
       registerAuthHandlers(socket, authManager, lobbyManager);
       registerLobbyHandlers(socket, authManager, lobbyManager);
       registerMatchmakingHandlers(socket, authManager, matchmakingManager, matchManager);
       registerMatchHandlers(socket, authManager, matchManager);
+      registerSpectatorHandlers(socket, matchManager, spectatorManager);
     }
 
     socket.on('disconnect', () => {

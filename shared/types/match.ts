@@ -67,3 +67,61 @@ export interface MatchTestResult {
   dummyFinalHealth: number;
   ticks: number;
 }
+
+// Battle Arena Events
+export interface Position {
+  x: number;
+  y: number;
+}
+
+export interface FighterState {
+  playerId: string;
+  username: string;
+  health: number;
+  maxHealth: number;
+  position: Position;
+  attacking: boolean;
+  blocking: boolean;
+  attackCooldown: number;
+  lastAction: string;
+}
+
+export interface MatchEvent {
+  type: 'ATTACK' | 'BLOCK' | 'DAMAGE' | 'MISS';
+  attacker?: string;
+  target?: string;
+  damage?: number;
+  position?: Position;
+}
+
+export interface BattleMatchState {
+  matchId: string;
+  tick: number;
+  phase: 'BATTLE' | 'FINISHED';
+  duration: number; // ms since start
+  fighterA: FighterState;
+  fighterB: FighterState;
+  lastEvent?: MatchEvent;
+  spectatorCount: number;
+}
+
+export interface MatchResults {
+  matchId: string;
+  winner: 'A' | 'B' | 'DRAW';
+  winnerPlayer?: PublicPlayerData;
+  loserPlayer?: PublicPlayerData;
+  finalHealthA: number;
+  finalHealthB: number;
+  tickCount: number;
+  duration: number;
+  statsA: CombatStats;
+  statsB: CombatStats;
+}
+
+export interface CombatStats {
+  attacksLanded: number;
+  blocksUsed: number;
+  damageDealt: number;
+  damageTaken: number;
+  finalPosition: Position;
+}
