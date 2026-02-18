@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import { theme } from '../../theme';
 
 interface ButtonProps {
-  $variant?: 'primary' | 'secondary' | 'success';
+  $variant?: 'primary' | 'secondary' | 'success' | 'tertiary';
 }
 
 const Button = styled.button<ButtonProps>`
@@ -16,8 +16,13 @@ const Button = styled.button<ButtonProps>`
   background: ${props => 
     props.$variant === 'secondary' ? theme.colors.bg.tertiary :
     props.$variant === 'success' ? theme.colors.accent.success :
+    props.$variant === 'tertiary' ? 'transparent' :
     theme.colors.accent.success};
-  color: ${props => props.$variant === 'secondary' ? theme.colors.text.primary : theme.colors.bg.primary};
+  color: ${props => 
+    props.$variant === 'secondary' ? theme.colors.text.primary : 
+    props.$variant === 'tertiary' ? theme.colors.text.secondary :
+    theme.colors.bg.primary};
+  border: ${props => props.$variant === 'tertiary' ? `2px solid ${theme.colors.bg.tertiary}` : 'none'};
   
   &:hover {
     transform: translateY(-2px);

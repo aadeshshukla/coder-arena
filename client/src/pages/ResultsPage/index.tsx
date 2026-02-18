@@ -1,15 +1,67 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { MatchResults } from '../../../../shared/types/match';
 import { useAuth } from '../../contexts/AuthContext';
+import { useStatsStore } from '../../stores/statsStore';
+import { useRematch } from '../../hooks/useRematch';
+import { useSound } from '../../hooks/useSound';
+import { checkAchievements } from '../../utils/achievements';
+import RematchModal from './RematchModal';
+import Tooltip from '../../components/common/Tooltip';
 
 const ResultsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { recordMatchResult } = useStatsStore();
+  const { playSound } = useSound();
+  const { sendRematchRequest, rematchRequest, acceptRematch, declineRematch } = useRematch();
+  
+  const [showRematchModal, setShowRematchModal] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
   
   const results = location.state?.results as MatchResults | undefined;
+
+  // Save match results on mount
+  useEffect(() => {
+    if (!results || !user) return;
+    
+    const isWinner = results.winnerPlayer?.id === user.id;
+    const isDraw = results.winner === 'DRAW';
+    const isPlayerA = results.winnerPlayer ? (results.winner === 'A' && isWinner) || (results.winner === 'B' && !isWinner) : true;
+    const playerStats = isPlayerA ? results.statsA : results.statsB;
+    const opponentName = isPlayerA ? 'Opponent' : 'Opponent';
+
+    // Record match result and get updated stats
+    const matchEntry = {
+      matchId: results.matchId,
+      opponent: opponentName,
+      result: isDraw ? 'draw' : isWinner ? 'win' : 'loss',
+      damageDealt: playerStats.damageDealt,
+      damageTaken: playerStats.damageTaken,
+      duration: results.duration,
+      timestamp: Date.now()
+    } as const;
+    
+    recordMatchResult(matchEntry);
+
+    // Play sound
+    playSound(isWinner ? 'victory' : 'defeat');
+
+    // Check achievements with the current stats after recording
+    // Note: Since Zustand updates are synchronous, stats will be updated immediately
+    setTimeout(() => {
+      checkAchievements(useStatsStore.getState().stats);
+    }, 0);
+  }, [results, user]);
+
+  // Listen for rematch requests
+  useEffect(() => {
+    if (rematchRequest) {
+      setShowRematchModal(true);
+    }
+  }, [rematchRequest]);
 
   if (!results) {
     return (
@@ -28,6 +80,33 @@ const ResultsPage: React.FC = () => {
   const opponentStats = isPlayerA ? results.statsB : results.statsA;
   const playerHealth = isPlayerA ? results.finalHealthA : results.finalHealthB;
   const opponentHealth = isPlayerA ? results.finalHealthB : results.finalHealthA;
+
+  const handleRematch = () => {
+    if (results.winnerPlayer) {
+      const opponentId = results.winnerPlayer.id === user?.id 
+        ? results.loserPlayer?.id 
+        : results.winnerPlayer.id;
+      if (opponentId) {
+        sendRematchRequest(opponentId);
+      }
+    }
+  };
+
+  const handleShare = async () => {
+    const shareText = `I just ${won ? 'won' : 'lost'} in Coder Arena! ${Math.round(playerStats.damageDealt)} damage dealt in ${Math.floor(results.duration / 1000)}s`;
+    
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: shareText });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  };
 
   return (
     <Container>
@@ -108,10 +187,36 @@ const ResultsPage: React.FC = () => {
       </StatsContainer>
 
       <ActionButtons>
-        <ActionButton onClick={() => navigate('/lobby')}>
-          Back to Lobby
+        <Tooltip content="Challenge opponent to a rematch">
+          <ActionButton onClick={handleRematch} $variant="primary">
+            🔄 Rematch
+          </ActionButton>
+        </Tooltip>
+        <Tooltip content={shareSuccess ? "Copied!" : "Share your results"}>
+          <ActionButton onClick={handleShare} $variant="secondary">
+            📤 {shareSuccess ? 'Copied!' : 'Share'}
+          </ActionButton>
+        </Tooltip>
+        <ActionButton onClick={() => navigate('/lobby')} $variant="tertiary">
+          🏠 Back to Lobby
         </ActionButton>
       </ActionButtons>
+
+      {/* Rematch Modal */}
+      {showRematchModal && rematchRequest && (
+        <RematchModal
+          opponent={rematchRequest.fromUsername}
+          onAccept={() => {
+            acceptRematch();
+            setShowRematchModal(false);
+            navigate('/lobby'); // Go to lobby to wait for match
+          }}
+          onDecline={() => {
+            declineRematch();
+            setShowRematchModal(false);
+          }}
+        />
+      )}
     </Container>
   );
 };
@@ -248,21 +353,46 @@ const ActionButtons = styled.div`
   gap: 20px;
 `;
 
-const ActionButton = styled.button`
+const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'tertiary' }>`
   padding: 15px 40px;
   font-size: 18px;
   font-weight: 600;
-  color: #fff;
-  background: rgba(0, 255, 136, 0.2);
-  border: 2px solid #00ff88;
+  color: ${props => props.$variant === 'tertiary' ? 'rgba(255, 255, 255, 0.7)' : '#fff'};
+  background: ${props => {
+    switch (props.$variant) {
+      case 'primary': return 'rgba(0, 255, 136, 0.2)';
+      case 'secondary': return 'rgba(0, 212, 255, 0.2)';
+      default: return 'transparent';
+    }
+  }};
+  border: 2px solid ${props => {
+    switch (props.$variant) {
+      case 'primary': return '#00ff88';
+      case 'secondary': return '#00d4ff';
+      default: return 'rgba(255, 255, 255, 0.3)';
+    }
+  }};
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(0, 255, 136, 0.3);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+    background: ${props => {
+      switch (props.$variant) {
+        case 'primary': return 'rgba(0, 255, 136, 0.3)';
+        case 'secondary': return 'rgba(0, 212, 255, 0.3)';
+        default: return 'rgba(255, 255, 255, 0.1)';
+      }
+    }};
+    box-shadow: 0 0 20px ${props => {
+      switch (props.$variant) {
+        case 'primary': return 'rgba(0, 255, 136, 0.5)';
+        case 'secondary': return 'rgba(0, 212, 255, 0.5)';
+        default: return 'rgba(255, 255, 255, 0.3)';
+      }
+    }};
     transform: translateY(-2px);
+    color: #fff;
   }
 `;
 

@@ -284,6 +284,9 @@ const LobbyPage: React.FC = () => {
           <PlayerCount>{playerCount} player{playerCount !== 1 ? 's' : ''} online</PlayerCount>
         </HeaderLeft>
         <HeaderRight>
+          <Button $variant="tertiary" onClick={() => navigate('/profile')}>
+            👤 Profile
+          </Button>
           <Button $variant="primary" onClick={() => navigate('/spectator')}>
             👁 Watch Battles
           </Button>
