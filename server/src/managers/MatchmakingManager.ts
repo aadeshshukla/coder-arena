@@ -239,7 +239,6 @@ export class MatchmakingManager {
    */
   private startRoomCleanup(): void {
     this.roomCleanupInterval = setInterval(() => {
-      const now = Date.now();
       const expiredRooms: string[] = [];
 
       this.rooms.forEach((room, code) => {
