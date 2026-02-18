@@ -435,12 +435,14 @@ describe('CASL Integration Tests', () => {
           }
           
           RULE "Retreat" {
-            WHEN self.health < 30 AND distance < 4
+            WHEN self.health < 30
+             AND distance < 4
             DO RETREAT
           }
           
           RULE "Idle" {
-            WHEN distance >= 5 AND distance <= 7
+            WHEN distance >= 5
+             AND distance <= 7
             DO IDLE
           }
           

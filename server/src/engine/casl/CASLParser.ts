@@ -95,6 +95,12 @@ export class CASLParser {
     const rules: CASLRule[] = [];
     
     // Match RULE blocks: RULE "name" { ... }
+    // Pattern explanation:
+    // - RULE\s+ : Match 'RULE' keyword followed by whitespace
+    // - "([^"]+)" : Capture rule name in quotes
+    // - \s*\{ : Optional whitespace and opening brace
+    // - ([^}]*(?:\{[^}]*\}[^}]*)*) : Capture rule body, allowing nested braces
+    // - \} : Closing brace
     const ruleRegex = /RULE\s+"([^"]+)"\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g;
     let match;
 
@@ -171,6 +177,12 @@ export class CASLParser {
    */
   private parseCondition(text: string): CASLCondition {
     // Match: field operator value
+    // Pattern explanation:
+    // - ^([\w.]+) : Capture field name (word characters and dots)
+    // - \s* : Optional whitespace
+    // - (<=|>=|==|!=|<|>) : Capture comparison operator
+    // - \s* : Optional whitespace
+    // - (\d+(?:\.\d+)?)$ : Capture numeric value (integer or decimal)
     const conditionRegex = /^([\w.]+)\s*(<=|>=|==|!=|<|>)\s*(\d+(?:\.\d+)?)$/;
     const match = text.trim().match(conditionRegex);
 

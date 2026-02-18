@@ -2,6 +2,8 @@ import {
   CASLStrategy,
   CASLField,
   CASLOperator,
+  CASLCondition,
+  CASLRule,
   ValidationResult,
 } from '../../../../shared/types/casl';
 import { ActionType } from '../../../../shared/types/actions';
@@ -114,7 +116,7 @@ export class CASLValidator {
   /**
    * Validate a single rule
    */
-  private validateRule(rule: any, index: number): void {
+  private validateRule(rule: CASLRule, index: number): void {
     const rulePrefix = `Rule ${index + 1} ("${rule.name}")`;
 
     // Validate rule name
@@ -136,7 +138,7 @@ export class CASLValidator {
     }
 
     // Validate conditions
-    rule.conditionGroup.conditions.forEach((condition: any, condIndex: number) => {
+    rule.conditionGroup.conditions.forEach((condition: CASLCondition, condIndex: number) => {
       this.validateCondition(condition, `${rulePrefix}, condition ${condIndex + 1}`);
     });
 
@@ -164,7 +166,7 @@ export class CASLValidator {
   /**
    * Validate a single condition
    */
-  private validateCondition(condition: any, prefix: string): void {
+  private validateCondition(condition: CASLCondition, prefix: string): void {
     // Validate field
     if (!CASLValidator.VALID_FIELDS.includes(condition.field)) {
       this.errors.push(
@@ -217,7 +219,7 @@ export class CASLValidator {
   /**
    * Validate an action
    */
-  private validateAction(action: any, prefix: string): void {
+  private validateAction(action: ActionType, prefix: string): void {
     if (!CASLValidator.VALID_ACTIONS.includes(action)) {
       this.errors.push(
         `${prefix}: Invalid action "${action}" (valid actions: ${CASLValidator.VALID_ACTIONS.join(', ')})`
