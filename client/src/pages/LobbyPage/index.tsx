@@ -13,7 +13,8 @@ import { LobbyState } from '../../../../shared/types/events';
 import {
   QueueJoinedResponse,
   RoomCreatedResponse,
-  RoomJoinedResponse
+  RoomJoinedResponse,
+  MatchFoundEvent
 } from '../../../../shared/types/matchmaking';
 
 const Container = styled.div`
@@ -185,7 +186,7 @@ const LobbyPage: React.FC = () => {
   const { socket } = useSocket();
   const navigate = useNavigate();
   const { players, playerCount, setPlayers } = useLobbyStore();
-  const { setInQueue } = useMatchmakingStore();
+  const { setInQueue, setMatchId, setOpponent } = useMatchmakingStore();
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [roomCode, setRoomCode] = useState('');
@@ -207,11 +208,20 @@ const LobbyPage: React.FC = () => {
       setPlayers(state.players);
     });
 
+    // Listen for match found (for private rooms)
+    socket.on('match:found', (data: MatchFoundEvent) => {
+      console.log('Match found:', data);
+      setMatchId(data.matchId);
+      setOpponent(data.opponent);
+      navigate(`/editor/${data.matchId}`);
+    });
+
     return () => {
       socket.off('lobby:update');
+      socket.off('match:found');
       socket.emit('lobby:leave');
     };
-  }, [socket, user, setPlayers]);
+  }, [socket, user, setPlayers, navigate, setMatchId, setOpponent]);
 
   const handleLogout = () => {
     logout();
