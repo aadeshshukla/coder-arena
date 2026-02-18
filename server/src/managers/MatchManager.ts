@@ -292,6 +292,13 @@ export class MatchManager {
   }
 
   /**
+   * Get the count of active matches
+   */
+  getActiveMatchCount(): number {
+    return this.matches.size;
+  }
+
+  /**
    * Cleanup resources
    */
   cleanup(): void {
