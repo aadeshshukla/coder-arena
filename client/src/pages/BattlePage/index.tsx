@@ -7,6 +7,7 @@ import HealthBar from '../../components/arena/HealthBar';
 import AttackEffect from '../../components/arena/AttackEffect';
 import BlockEffect from '../../components/arena/BlockEffect';
 import DamageNumber from '../../components/arena/DamageNumber';
+import ActionButtons from './ActionButtons';
 import { MatchEvent } from '../../../../shared/types/match';
 
 const ARENA_WIDTH = 800;
@@ -156,6 +157,12 @@ const BattlePage: React.FC = () => {
           <FinishedText>Battle Complete!</FinishedText>
         </FinishedOverlay>
       )}
+
+      {matchState.phase !== 'FINISHED' && matchId && (
+        <ActionButtonsWrapper>
+          <ActionButtons matchId={matchId} />
+        </ActionButtonsWrapper>
+      )}
     </Container>
   );
 };
@@ -280,6 +287,12 @@ const FinishedOverlay = styled.div`
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1000;
+`;
+
+const ActionButtonsWrapper = styled.div`
+  margin-top: 24px;
+  width: 100%;
+  max-width: 1000px;
 `;
 
 const FinishedText = styled.div`

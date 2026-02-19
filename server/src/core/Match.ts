@@ -17,7 +17,7 @@ function calculateDistance(pos1: Position, pos2: Position): number {
 
 // Battle constants
 const TICK_INTERVAL_MS = 100;
-const MAX_TICKS = 3000; // 5 minutes max
+const MAX_TICKS = 6000; // 10 minutes max
 const BASE_DAMAGE = 10;
 const BLOCK_DAMAGE_REDUCTION = 0.5;
 const ATTACK_RANGE = 2;
@@ -48,15 +48,18 @@ export class Match {
   private statsB: CombatStats;
   private onBroadcast?: (state: BattleMatchState) => void;
   private onFinish?: (results: MatchResults) => void;
+  /** Pending manual action override for each player (consumed on next tick) */
+  private pendingActionA?: ActionType;
+  private pendingActionB?: ActionType;
 
   constructor(playerA: Player, playerB: Player) {
     this.id = `match_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    this.state = MatchState.PREPARATION;
+    this.state = MatchState.BATTLE;
     this.playerA = playerA;
     this.playerB = playerB;
     this.readyA = false;
     this.readyB = false;
-    this.countdown = 30;
+    this.countdown = 0;
     this.createdAt = Date.now();
     this.codeTypeA = 'CASL';
     this.codeTypeB = 'CASL';
@@ -83,24 +86,42 @@ export class Match {
   }
 
   /**
-   * Submit code for a player
+   * Submit code for a player (valid during BATTLE state).
+   * Also reinitialises the executor so the new strategy takes effect immediately.
    */
   submitCode(playerId: string, code: string, language: CodeLanguage = 'CASL'): boolean {
-    if (this.state !== MatchState.PREPARATION) {
+    if (this.state !== MatchState.BATTLE) {
       return false;
     }
 
     if (playerId === this.playerA.id) {
       this.codeA = code;
       this.codeTypeA = language;
-      return true;
+      this.executorA = this.buildExecutor(code, language);
+      return this.executorA !== undefined;
     } else if (playerId === this.playerB.id) {
       this.codeB = code;
       this.codeTypeB = language;
-      return true;
+      this.executorB = this.buildExecutor(code, language);
+      return this.executorB !== undefined;
     }
 
     return false;
+  }
+
+  /**
+   * Build an executor from code + language.  Returns undefined on parse failure.
+   */
+  private buildExecutor(code: string, language: CodeLanguage): CASLExecutor | JSExecutor | undefined {
+    if (language === 'JS') {
+      return new JSExecutor(code);
+    }
+    const parser = new CASLParser(code);
+    const result = parser.parse();
+    if (!result.success || !result.strategy) {
+      return undefined;
+    }
+    return new CASLExecutor(result.strategy);
   }
 
   /**
@@ -186,37 +207,37 @@ export class Match {
   }
   
   /**
-   * Start the actual battle simulation
+   * Start the actual battle simulation.
+   * If code has not been submitted for a player, that player uses a default APPROACH strategy.
    */
   startBattleSimulation(onBroadcast: (state: BattleMatchState) => void, onFinish: (results: MatchResults) => void): void {
-    if (!this.codeA || !this.codeB) {
-      console.error('Cannot start battle: missing code');
-      return;
-    }
-    
-    // Parse and create executors
-    if (this.codeTypeA === 'JS') {
-      this.executorA = new JSExecutor(this.codeA);
-    } else {
-      const parserA = new CASLParser(this.codeA);
-      const parseResultA = parserA.parse();
-      if (!parseResultA.success || !parseResultA.strategy) {
-        console.error('Cannot start battle: code parsing failed for player A');
-        return;
+    // Parse and create executors only if code was submitted
+    if (this.codeA) {
+      if (this.codeTypeA === 'JS') {
+        this.executorA = new JSExecutor(this.codeA);
+      } else {
+        const parserA = new CASLParser(this.codeA);
+        const parseResultA = parserA.parse();
+        if (!parseResultA.success || !parseResultA.strategy) {
+          console.error('Cannot start battle: code parsing failed for player A');
+          return;
+        }
+        this.executorA = new CASLExecutor(parseResultA.strategy);
       }
-      this.executorA = new CASLExecutor(parseResultA.strategy);
     }
 
-    if (this.codeTypeB === 'JS') {
-      this.executorB = new JSExecutor(this.codeB);
-    } else {
-      const parserB = new CASLParser(this.codeB);
-      const parseResultB = parserB.parse();
-      if (!parseResultB.success || !parseResultB.strategy) {
-        console.error('Cannot start battle: code parsing failed for player B');
-        return;
+    if (this.codeB) {
+      if (this.codeTypeB === 'JS') {
+        this.executorB = new JSExecutor(this.codeB);
+      } else {
+        const parserB = new CASLParser(this.codeB);
+        const parseResultB = parserB.parse();
+        if (!parseResultB.success || !parseResultB.strategy) {
+          console.error('Cannot start battle: code parsing failed for player B');
+          return;
+        }
+        this.executorB = new CASLExecutor(parseResultB.strategy);
       }
-      this.executorB = new CASLExecutor(parseResultB.strategy);
     }
     this.onBroadcast = onBroadcast;
     this.onFinish = onFinish;
@@ -260,12 +281,24 @@ export class Match {
     
     console.log(`Battle started for match ${this.id}`);
   }
+
+  /**
+   * Set a manual action override for a player (triggered by an action button).
+   * This action is consumed on the next tick.
+   */
+  setPendingAction(playerId: string, action: ActionType): void {
+    if (playerId === this.playerA.id) {
+      this.pendingActionA = action;
+    } else if (playerId === this.playerB.id) {
+      this.pendingActionB = action;
+    }
+  }
   
   /**
    * Process a single battle tick
    */
   private processBattleTick(): void {
-    if (!this.battleState || !this.executorA || !this.executorB) {
+    if (!this.battleState) {
       return;
     }
     
@@ -297,28 +330,46 @@ export class Match {
       },
       distance
     };
-    
-    // Execute strategies
-    const actionA = this.codeTypeA === 'JS'
-      ? (this.executorA as JSExecutor).execute({
-          distance,
-          health: fighterA.health,
-          opponentHealth: fighterB.health,
-          position: fighterA.position,
-          opponentPosition: fighterB.position,
-          tick: this.battleState.tick
-        })
-      : (this.executorA as CASLExecutor).execute(contextA);
-    const actionB = this.codeTypeB === 'JS'
-      ? (this.executorB as JSExecutor).execute({
-          distance,
-          health: fighterB.health,
-          opponentHealth: fighterA.health,
-          position: fighterB.position,
-          opponentPosition: fighterA.position,
-          tick: this.battleState.tick
-        })
-      : (this.executorB as CASLExecutor).execute(contextB);
+
+    // Determine action for player A: pending override > executor > default APPROACH
+    let actionA: ActionType;
+    if (this.pendingActionA !== undefined) {
+      actionA = this.pendingActionA;
+      this.pendingActionA = undefined;
+    } else if (this.executorA) {
+      actionA = this.codeTypeA === 'JS'
+        ? (this.executorA as JSExecutor).execute({
+            distance,
+            health: fighterA.health,
+            opponentHealth: fighterB.health,
+            position: fighterA.position,
+            opponentPosition: fighterB.position,
+            tick: this.battleState.tick
+          })
+        : (this.executorA as CASLExecutor).execute(contextA);
+    } else {
+      actionA = 'APPROACH';
+    }
+
+    // Determine action for player B: pending override > executor > default APPROACH
+    let actionB: ActionType;
+    if (this.pendingActionB !== undefined) {
+      actionB = this.pendingActionB;
+      this.pendingActionB = undefined;
+    } else if (this.executorB) {
+      actionB = this.codeTypeB === 'JS'
+        ? (this.executorB as JSExecutor).execute({
+            distance,
+            health: fighterB.health,
+            opponentHealth: fighterA.health,
+            position: fighterB.position,
+            opponentPosition: fighterA.position,
+            tick: this.battleState.tick
+          })
+        : (this.executorB as CASLExecutor).execute(contextB);
+    } else {
+      actionB = 'APPROACH';
+    }
     
     // Simulate tick
     this.simulateTick(actionA, actionB);

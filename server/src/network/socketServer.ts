@@ -6,6 +6,7 @@ import { MatchmakingManager } from '../managers/MatchmakingManager';
 import { MatchManager } from '../managers/MatchManager';
 import { SpectatorManager } from '../managers/SpectatorManager';
 import { RematchManager } from '../managers/RematchManager';
+import { ActionManager } from '../managers/ActionManager';
 import { registerAuthHandlers } from './eventHandlers/authHandler';
 import { registerLobbyHandlers } from './eventHandlers/lobbyHandler';
 import { registerMatchmakingHandlers } from './eventHandlers/matchmakingHandler';
@@ -21,6 +22,7 @@ let matchmakingManager: MatchmakingManager | null = null;
 let matchManager: MatchManager | null = null;
 let spectatorManager: SpectatorManager | null = null;
 let rematchManager: RematchManager | null = null;
+let actionManager: ActionManager | null = null;
 
 // Throttle configuration: limit broadcasts to 10-20 per second
 const MIN_BROADCAST_INTERVAL_MS = 50; // 20 broadcasts/sec max
@@ -41,7 +43,8 @@ export function startSocketServer(): void {
   authManager = new AuthManager();
   lobbyManager = new LobbyManager(io, authManager);
   matchmakingManager = new MatchmakingManager(io, authManager);
-  matchManager = new MatchManager(io, authManager);
+  actionManager = new ActionManager();
+  matchManager = new MatchManager(io, authManager, actionManager);
   spectatorManager = new SpectatorManager(io, matchManager);
   rematchManager = new RematchManager(io);
 
@@ -58,7 +61,7 @@ export function startSocketServer(): void {
       registerAuthHandlers(socket, authManager, lobbyManager);
       registerLobbyHandlers(socket, authManager, lobbyManager);
       registerMatchmakingHandlers(socket, authManager, matchmakingManager, matchManager);
-      registerMatchHandlers(socket, authManager, matchManager);
+      registerMatchHandlers(socket, authManager, matchManager, actionManager ?? undefined);
       registerSpectatorHandlers(socket, matchManager, spectatorManager);
       registerRematchHandlers(socket, rematchManager);
     }
