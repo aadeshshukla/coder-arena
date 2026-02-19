@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { CodeLanguage } from '../../../shared/types/match';
 
 interface ValidationError {
   message: string;
@@ -8,6 +9,7 @@ interface ValidationError {
 interface EditorState {
   code: string;
   savedCode: string;
+  codeLanguage: CodeLanguage;
   isValid: boolean;
   validationErrors: ValidationError[];
   isValidating: boolean;
@@ -17,6 +19,7 @@ interface EditorState {
   
   setCode: (code: string) => void;
   setSavedCode: (code: string) => void;
+  setCodeLanguage: (language: CodeLanguage) => void;
   setValidation: (isValid: boolean, errors: ValidationError[]) => void;
   setValidating: (validating: boolean) => void;
   setLastSaved: (date: Date) => void;
@@ -42,6 +45,7 @@ const DEFAULT_CODE = `STRATEGY BeginnerBot {
 export const useEditorStore = create<EditorState>((set) => ({
   code: localStorage.getItem('coder_arena_last_code') || DEFAULT_CODE,
   savedCode: localStorage.getItem('coder_arena_last_code') || DEFAULT_CODE,
+  codeLanguage: (localStorage.getItem('coder_arena_code_language') as CodeLanguage) || 'CASL',
   isValid: true,
   validationErrors: [],
   isValidating: false,
@@ -51,6 +55,10 @@ export const useEditorStore = create<EditorState>((set) => ({
   
   setCode: (code) => set({ code }),
   setSavedCode: (code) => set({ savedCode: code }),
+  setCodeLanguage: (language) => {
+    localStorage.setItem('coder_arena_code_language', language);
+    set({ codeLanguage: language });
+  },
   setValidation: (isValid, errors) => set({ isValid, validationErrors: errors }),
   setValidating: (validating) => set({ isValidating: validating }),
   setLastSaved: (date) => set({ lastSaved: date }),
@@ -59,6 +67,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   reset: () => set({
     code: DEFAULT_CODE,
     savedCode: DEFAULT_CODE,
+    codeLanguage: 'CASL',
     isValid: true,
     validationErrors: [],
     isValidating: false,

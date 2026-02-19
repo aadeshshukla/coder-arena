@@ -8,13 +8,16 @@ import { useEditorStore } from '../../stores/editorStore';
 import Button from '../../components/common/Button';
 import MonacoWrapper from '../../components/editor/MonacoWrapper';
 import TemplateSelector from '../../components/editor/TemplateSelector';
+import LanguageSelector from '../../components/editor/LanguageSelector';
 import { CodeTemplate } from '../../utils/codeTemplates';
+import { jsTemplates } from '../../utils/jsTemplates';
 import {
   CodeValidatedResponse,
   MatchCountdownEvent,
   MatchPrepareEvent,
   MatchStartEvent,
-  OpponentReadyEvent
+  OpponentReadyEvent,
+  CodeLanguage
 } from '../../../../shared/types/match';
 
 const Container = styled.div`
@@ -165,6 +168,7 @@ const EditorPage: React.FC = () => {
   const { opponent } = useMatchmakingStore();
   const {
     code,
+    codeLanguage,
     isValid,
     validationErrors,
     opponentReady,
@@ -172,6 +176,7 @@ const EditorPage: React.FC = () => {
     lastSaved,
     setCode,
     setSavedCode,
+    setCodeLanguage,
     setValidation,
     setOpponentReady,
     setCountdown,
@@ -231,21 +236,33 @@ const EditorPage: React.FC = () => {
   // Validation debounce
   useEffect(() => {
     const validateTimer = setTimeout(() => {
-      // Simple client-side validation (basic checks)
-      const hasStrategy = code.includes('STRATEGY');
-      const hasDefault = code.includes('DEFAULT');
-      
-      if (!hasStrategy) {
-        setValidation(false, [{ message: 'Missing STRATEGY declaration' }]);
-      } else if (!hasDefault) {
-        setValidation(false, [{ message: 'Missing DEFAULT action' }]);
+      if (codeLanguage === 'JS') {
+        // Basic JS validation: must have Fighter class and execute method
+        const hasFighter = code.includes('class Fighter');
+        const hasExecute = code.includes('execute(');
+        if (!hasFighter) {
+          setValidation(false, [{ message: 'Code must define a class named Fighter' }]);
+        } else if (!hasExecute) {
+          setValidation(false, [{ message: 'Fighter class must have an execute() method' }]);
+        } else {
+          setValidation(true, []);
+        }
       } else {
-        setValidation(true, []);
+        // CASL validation
+        const hasStrategy = code.includes('STRATEGY');
+        const hasDefault = code.includes('DEFAULT');
+        if (!hasStrategy) {
+          setValidation(false, [{ message: 'Missing STRATEGY declaration' }]);
+        } else if (!hasDefault) {
+          setValidation(false, [{ message: 'Missing DEFAULT action' }]);
+        } else {
+          setValidation(true, []);
+        }
       }
     }, 500);
 
     return () => clearTimeout(validateTimer);
-  }, [code, setValidation]);
+  }, [code, codeLanguage, setValidation]);
 
   const handleCodeChange = (value: string | undefined) => {
     setCode(value || '');
@@ -255,12 +272,37 @@ const EditorPage: React.FC = () => {
     setCode(template.code);
   };
 
+  const handleLanguageChange = (language: CodeLanguage) => {
+    setCodeLanguage(language);
+    setHasSubmitted(false);
+    setValidation(true, []);
+    // Load a default template for the new language
+    if (language === 'JS') {
+      setCode(jsTemplates[0].code);
+    } else {
+      // Reset to default CASL template
+      setCode(`STRATEGY BeginnerBot {
+  RULE "Attack When Close" {
+    WHEN distance < 3
+    DO ATTACK
+  }
+  
+  RULE "Get Closer" {
+    WHEN distance > 3
+    DO APPROACH
+  }
+  
+  DEFAULT IDLE
+}`);
+    }
+  };
+
   const handleSubmitCode = () => {
     if (!socket || !matchId || !isValid) return;
 
     setIsSubmitting(true);
 
-    socket.emit('code:submit', { matchId, code }, (response: CodeValidatedResponse) => {
+    socket.emit('code:submit', { matchId, code, language: codeLanguage }, (response: CodeValidatedResponse) => {
       setIsSubmitting(false);
 
       if (response.success) {
@@ -310,7 +352,7 @@ const EditorPage: React.FC = () => {
       <Header>
         <HeaderLeft>
           <Title>⚔️ Preparation Phase ⚔️</Title>
-          <Subtitle>Write your CASL strategy</Subtitle>
+          <Subtitle>Write your {codeLanguage === 'JS' ? 'JavaScript' : 'CASL'} strategy</Subtitle>
         </HeaderLeft>
         <Timer $warning={countdown <= 10}>
           ⏱️ {formatTime(countdown)}
@@ -319,9 +361,10 @@ const EditorPage: React.FC = () => {
 
       <Content>
         <EditorSection>
-          <TemplateSelector onSelect={handleTemplateSelect} />
+          <LanguageSelector value={codeLanguage} onChange={handleLanguageChange} />
+          {codeLanguage === 'CASL' && <TemplateSelector onSelect={handleTemplateSelect} />}
           <EditorContainer>
-            <MonacoWrapper value={code} onChange={handleCodeChange} />
+            <MonacoWrapper value={code} onChange={handleCodeChange} language={codeLanguage === 'JS' ? 'javascript' : 'plaintext'} />
           </EditorContainer>
         </EditorSection>
 

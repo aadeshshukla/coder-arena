@@ -19,10 +19,13 @@ export interface MatchData {
   createdAt: number;
 }
 
+export type CodeLanguage = 'CASL' | 'JS';
+
 // Match Preparation Events
 export interface CodeSubmitRequest {
   matchId: string;
   code: string;
+  language?: CodeLanguage;
 }
 
 export interface CodeValidatedResponse {

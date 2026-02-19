@@ -7,6 +7,7 @@ interface MonacoWrapperProps {
   value: string;
   onChange: (value: string | undefined) => void;
   readOnly?: boolean;
+  language?: string;
 }
 
 const EditorContainer = styled.div`
@@ -16,12 +17,12 @@ const EditorContainer = styled.div`
   overflow: hidden;
 `;
 
-const MonacoWrapper: React.FC<MonacoWrapperProps> = ({ value, onChange, readOnly = false }) => {
+const MonacoWrapper: React.FC<MonacoWrapperProps> = ({ value, onChange, readOnly = false, language = 'javascript' }) => {
   return (
     <EditorContainer>
       <Editor
         height="100%"
-        defaultLanguage="javascript"
+        language={language}
         value={value}
         onChange={onChange}
         theme="vs-dark"
