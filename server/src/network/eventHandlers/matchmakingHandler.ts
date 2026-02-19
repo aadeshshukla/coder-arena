@@ -9,7 +9,9 @@ import {
   RoomCreateRequest,
   RoomCreatedResponse,
   RoomJoinRequest,
-  RoomJoinedResponse
+  RoomJoinedResponse,
+  RoomStatusRequest,
+  RoomStatusResponse
 } from '../../../../shared/types/matchmaking';
 
 export function registerMatchmakingHandlers(
@@ -139,6 +141,28 @@ export function registerMatchmakingHandlers(
       if (callback) {
         callback({ success: false, error: joinResult.error });
       }
+    }
+  });
+
+  /**
+   * Handle room status query
+   */
+  socket.on('room:status', (data: RoomStatusRequest, callback?: (response: RoomStatusResponse) => void) => {
+    const room = matchmakingManager.getRoom(data.roomCode);
+
+    if (!room) {
+      if (callback) callback({ found: false });
+      return;
+    }
+
+    const hostPlayer = authManager.getPlayer(room.hostPlayerId);
+    if (callback) {
+      callback({
+        found: true,
+        expired: room.isExpired(),
+        full: room.isFull(),
+        hostUsername: hostPlayer?.username
+      });
     }
   });
 }

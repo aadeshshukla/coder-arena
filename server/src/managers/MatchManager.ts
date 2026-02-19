@@ -3,7 +3,8 @@ import { Match } from '../core/Match';
 import { AuthManager } from './AuthManager';
 import { CASLParser } from '../engine/casl/CASLParser';
 import { CASLValidator } from '../engine/casl/CASLValidator';
-import { BattleMatchState, MatchResults } from '../../../shared/types/match';
+import { JSValidator } from '../engine/js/JSValidator';
+import { BattleMatchState, MatchResults, CodeLanguage } from '../../../shared/types/match';
 
 export class MatchManager {
   private io: SocketIOServer;
@@ -53,7 +54,7 @@ export class MatchManager {
   /**
    * Submit code for a player in a match
    */
-  submitCode(playerId: string, matchId: string, code: string): {
+  submitCode(playerId: string, matchId: string, code: string, language: CodeLanguage = 'CASL'): {
     success: boolean;
     errors?: Array<{ message: string; line?: number }>;
   } {
@@ -67,31 +68,40 @@ export class MatchManager {
       return { success: false, errors: [{ message: 'Player not in this match' }] };
     }
 
-    // Validate code
-    const parser = new CASLParser(code);
-    const parseResult = parser.parse();
+    if (language === 'JS') {
+      // Validate JavaScript code
+      const jsValidator = new JSValidator();
+      const jsResult = jsValidator.validate(code);
+      if (!jsResult.valid) {
+        return { success: false, errors: jsResult.errors };
+      }
+    } else {
+      // Validate CASL code
+      const parser = new CASLParser(code);
+      const parseResult = parser.parse();
 
-    if (!parseResult.success || !parseResult.strategy) {
-      return { 
-        success: false, 
-        errors: parseResult.errors?.map(e => ({ message: e })) || [{ message: 'Failed to parse code' }]
-      };
+      if (!parseResult.success || !parseResult.strategy) {
+        return { 
+          success: false, 
+          errors: parseResult.errors?.map(e => ({ message: e })) || [{ message: 'Failed to parse code' }]
+        };
+      }
+
+      const validator = new CASLValidator();
+      const validationResult = validator.validate(parseResult.strategy);
+
+      if (!validationResult.valid) {
+        return { 
+          success: false, 
+          errors: validationResult.errors?.map(e => ({ message: e })) || [{ message: 'Code validation failed' }]
+        };
+      }
     }
 
-    const validator = new CASLValidator();
-    const validationResult = validator.validate(parseResult.strategy);
+    // Submit code with language
+    match.submitCode(playerId, code, language);
 
-    if (!validationResult.valid) {
-      return { 
-        success: false, 
-        errors: validationResult.errors?.map(e => ({ message: e })) || [{ message: 'Code validation failed' }]
-      };
-    }
-
-    // Submit code
-    match.submitCode(playerId, code);
-
-    console.log(`Player ${playerId} submitted code for match ${matchId}`);
+    console.log(`Player ${playerId} submitted ${language} code for match ${matchId}`);
 
     return { success: true };
   }

@@ -27,8 +27,8 @@ export function registerMatchHandlers(
       return;
     }
 
-    const { matchId, code } = data;
-    const result = matchManager.submitCode(player.id, matchId, code);
+    const { matchId, code, language } = data;
+    const result = matchManager.submitCode(player.id, matchId, code, language);
 
     if (callback) {
       callback(result);

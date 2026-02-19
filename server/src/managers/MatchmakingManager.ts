@@ -9,6 +9,7 @@ export class MatchmakingManager {
   private authManager: AuthManager;
   private queue: string[]; // Array of player IDs in queue (FIFO)
   private rooms: Map<string, Room>; // Map of room code -> Room
+  private playerRooms: Map<string, string>; // playerId -> roomCode
   private roomCleanupInterval?: NodeJS.Timeout;
 
   constructor(io: SocketIOServer, authManager: AuthManager) {
@@ -16,6 +17,7 @@ export class MatchmakingManager {
     this.authManager = authManager;
     this.queue = [];
     this.rooms = new Map();
+    this.playerRooms = new Map();
     
     // Start room cleanup interval (check every minute)
     this.startRoomCleanup();
@@ -136,6 +138,7 @@ export class MatchmakingManager {
 
     const room = new Room(roomCode, hostPlayerId);
     this.rooms.set(roomCode, room);
+    this.playerRooms.set(hostPlayerId, roomCode);
 
     console.log(`Room ${roomCode} created by ${player.username}`);
 
@@ -177,6 +180,7 @@ export class MatchmakingManager {
 
     // Add guest to room
     room.addGuest(guestPlayerId);
+    this.playerRooms.set(guestPlayerId, roomCode.toUpperCase());
 
     // Get host player
     const hostPlayer = this.authManager.getPlayer(room.hostPlayerId);
@@ -204,7 +208,9 @@ export class MatchmakingManager {
     });
 
     // Clean up room after match is created
-    this.rooms.delete(roomCode);
+    this.rooms.delete(roomCode.toUpperCase());
+    this.playerRooms.delete(room.hostPlayerId);
+    this.playerRooms.delete(guestPlayerId);
 
     return { success: true, match };
   }
@@ -266,6 +272,34 @@ export class MatchmakingManager {
    */
   isInQueue(playerId: string): boolean {
     return this.queue.includes(playerId);
+  }
+
+  /**
+   * Remove a player from any room they are currently in.
+   * If the player is the host, the room is deleted entirely.
+   * If the player is the guest, the room is left open.
+   */
+  removePlayerFromRooms(playerId: string): void {
+    const roomCode = this.playerRooms.get(playerId);
+    if (!roomCode) return;
+
+    const upperCode = roomCode.toUpperCase();
+    const room = this.rooms.get(upperCode);
+    if (room) {
+      if (room.hostPlayerId === playerId) {
+        console.log(`Removing room ${upperCode} due to host disconnect`);
+        this.rooms.delete(upperCode);
+        // Also clean up the guest's reverse mapping
+        if (room.guestPlayerId) {
+          this.playerRooms.delete(room.guestPlayerId);
+        }
+      } else if (room.guestPlayerId === playerId) {
+        // Guest left - room stays open
+        room.guestPlayerId = undefined;
+      }
+    }
+
+    this.playerRooms.delete(playerId);
   }
 
   /**

@@ -51,3 +51,14 @@ export interface RoomJoinedResponse {
 export interface RoomErrorEvent {
   message: string;
 }
+
+export interface RoomStatusRequest {
+  roomCode: string;
+}
+
+export interface RoomStatusResponse {
+  found: boolean;
+  expired?: boolean;
+  full?: boolean;
+  hostUsername?: string;
+}

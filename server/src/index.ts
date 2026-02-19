@@ -72,6 +72,7 @@ io.on('connection', (socket) => {
     if (player) {
       lobbyManager.leaveLobby(player.id);
       matchmakingManager.leaveQueue(player.id);
+      matchmakingManager.removePlayerFromRooms(player.id);
     }
   });
 });
