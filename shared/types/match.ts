@@ -1,4 +1,5 @@
 import { PublicPlayerData } from './player';
+import { ActionButton } from './actions';
 
 export enum MatchState {
   PREPARATION = 'PREPARATION',
@@ -106,6 +107,8 @@ export interface BattleMatchState {
   fighterB: FighterState;
   lastEvent?: MatchEvent;
   spectatorCount: number;
+  actionsA?: ActionButton[];  // Player A's available actions
+  actionsB?: ActionButton[];  // Player B's available actions
 }
 
 export interface MatchResults {
@@ -127,4 +130,13 @@ export interface CombatStats {
   damageDealt: number;
   damageTaken: number;
   finalPosition: Position;
+}
+
+export interface BattleActionAvailableEvent {
+  action: ActionButton;
+}
+
+export interface BattleCooldownEvent {
+  actionId: string;
+  cooldownRemaining: number; // ms remaining
 }

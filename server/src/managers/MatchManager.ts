@@ -1,6 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Match } from '../core/Match';
 import { AuthManager } from './AuthManager';
+import { ActionManager } from './ActionManager';
 import { CASLParser } from '../engine/casl/CASLParser';
 import { CASLValidator } from '../engine/casl/CASLValidator';
 import { JSValidator } from '../engine/js/JSValidator';
@@ -9,46 +10,50 @@ import { BattleMatchState, MatchResults, CodeLanguage } from '../../../shared/ty
 export class MatchManager {
   private io: SocketIOServer;
   private authManager: AuthManager;
+  private actionManager?: ActionManager;
   private matches: Map<string, Match>; // Map of match ID -> Match
 
-  constructor(io: SocketIOServer, authManager: AuthManager) {
+  constructor(io: SocketIOServer, authManager: AuthManager, actionManager?: ActionManager) {
     this.io = io;
     this.authManager = authManager;
+    this.actionManager = actionManager;
     this.matches = new Map();
   }
 
   /**
-   * Add a match to the manager
+   * Add a match to the manager and start the battle immediately
    */
   addMatch(match: Match): void {
     this.matches.set(match.id, match);
-    
-    // Start countdown
-    match.startCountdown(
-      // On tick
-      (seconds) => {
-        this.broadcastCountdown(match.id, seconds);
-      },
-      // On complete
-      () => {
-        this.handleCountdownComplete(match.id);
-      }
-    );
 
-    // Send preparation event to both players
-    this.io.to(match.playerA.socketId).emit('match:prepare', {
+    // Initialise default action buttons for each player
+    if (this.actionManager) {
+      this.actionManager.initDefaultActions(match.playerA.id, match.id);
+      this.actionManager.initDefaultActions(match.playerB.id, match.id);
+    }
+
+    // Notify both players that the match has started
+    this.io.to(match.playerA.socketId).emit('match:start', {
       matchId: match.id,
       opponent: match.playerB.toPublicData(),
-      countdown: match.countdown
     });
 
-    this.io.to(match.playerB.socketId).emit('match:prepare', {
+    this.io.to(match.playerB.socketId).emit('match:start', {
       matchId: match.id,
       opponent: match.playerA.toPublicData(),
-      countdown: match.countdown
     });
 
-    console.log(`Match ${match.id} entered preparation phase`);
+    console.log(`Match ${match.id} started immediately (no preparation phase)`);
+
+    // Start the battle simulation right away
+    match.startBattleSimulation(
+      (state: BattleMatchState) => {
+        this.broadcastMatchState(match.id, state);
+      },
+      (results: MatchResults) => {
+        this.handleMatchFinish(match.id, results);
+      },
+    );
   }
 
   /**
