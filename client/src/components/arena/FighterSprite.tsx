@@ -59,14 +59,7 @@ const FighterSprite: React.FC<FighterSpriteProps> = ({ fighter, side }) => {
     setPrevHealth(fighter.health);
   }, [fighter.health, prevHealth]);
 
-  const color = side === 'A' ? '#00ff88' : '#00d4ff';
-
-  // Calculate fighter transform
-  const getTransform = () => {
-    const scale = fighter.attacking ? attackSpring.scale.get() : idleSpring.scale.get();
-    const rotateY = side === 'A' ? 0 : 180;
-    return `scale(${scale}) rotateY(${rotateY}deg)`;
-  };
+  const color = side === 'A' ? '#00d4ff' : '#ff00ff';
 
   return (
     <Container
@@ -77,7 +70,9 @@ const FighterSprite: React.FC<FighterSpriteProps> = ({ fighter, side }) => {
     >
       <FighterBody
         style={{
-          transform: attackSpring.scale.to(() => getTransform())
+          transform: attackSpring.scale.to(s =>
+            `scaleX(${side === 'B' ? -s : s}) scaleY(${idleSpring.scale.get()})`
+          )
         }}
         $color={color}
         $hurt={isHurt}
@@ -88,11 +83,11 @@ const FighterSprite: React.FC<FighterSpriteProps> = ({ fighter, side }) => {
         <FighterLeg />
       </FighterBody>
       
-      {fighter.blocking && (
-        <BlockIndicator style={blockSpring} />
-      )}
-      
       <NameTag>{fighter.username}</NameTag>
+
+      {fighter.blocking && (
+        <BlockIndicator style={blockSpring} $color={color} />
+      )}
     </Container>
   );
 };
@@ -147,22 +142,9 @@ const FighterLeg = styled.div<{ $left?: boolean }>`
   left: ${props => props.$left ? '15px' : '33px'};
 `;
 
-const BlockIndicator = styled(animated.div)`
-  position: absolute;
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  border: 3px solid #00d4ff;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(0, 212, 255, 0.2), transparent);
-  pointer-events: none;
-`;
-
 const NameTag = styled.div`
   position: absolute;
-  bottom: -25px;
+  top: -25px;
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
@@ -173,6 +155,19 @@ const NameTag = styled.div`
   background: rgba(0, 0, 0, 0.5);
   padding: 2px 8px;
   border-radius: 4px;
+`;
+
+const BlockIndicator = styled(animated.div)<{ $color: string }>`
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 3px solid ${props => props.$color};
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, ${props => props.$color}33, transparent);
+  pointer-events: none;
 `;
 
 export default React.memo(FighterSprite);
