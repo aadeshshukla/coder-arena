@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import QueuePage from './pages/QueuePage';
-import EditorPage from './pages/EditorPage';
 import BattlePage from './pages/BattlePage';
 import ResultsPage from './pages/ResultsPage';
 import SpectatorPage from './pages/SpectatorPage';
@@ -34,7 +33,7 @@ export default function Router() {
         <Route path="/" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/lobby" />} />
         <Route path="/lobby" element={isAuthenticated ? <LobbyPage /> : <Navigate to="/" />} />
         <Route path="/queue" element={isAuthenticated ? <QueuePage /> : <Navigate to="/" />} />
-        <Route path="/editor/:matchId" element={isAuthenticated ? <EditorPage /> : <Navigate to="/" />} />
+        <Route path="/editor/:matchId" element={<Navigate to="/lobby" />} />
         <Route path="/battle/:matchId" element={isAuthenticated ? <BattlePage /> : <Navigate to="/" />} />
         <Route path="/results/:matchId" element={isAuthenticated ? <ResultsPage /> : <Navigate to="/" />} />
         <Route path="/spectator" element={isAuthenticated ? <SpectatorPage /> : <Navigate to="/" />} />
