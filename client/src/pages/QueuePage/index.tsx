@@ -105,7 +105,7 @@ const QueuePage: React.FC = () => {
       console.log('Match found:', data);
       setMatchId(data.matchId);
       setOpponent(data.opponent);
-      navigate(`/editor/${data.matchId}`);
+      navigate(`/battle/${data.matchId}`);
     });
 
     return () => {

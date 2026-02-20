@@ -1,9 +1,5 @@
 import { Player, PlayerStatus } from './Player';
-import { MatchState, MatchData, BattleMatchState, FighterState, MatchEvent, MatchResults, CombatStats, Position, CodeLanguage } from '../../../shared/types/match';
-import { CASLParser } from '../engine/casl/CASLParser';
-import { CASLExecutor } from '../engine/casl/CASLExecutor';
-import { JSExecutor } from '../engine/js/JSExecutor';
-import { ExecutionContext } from '../../../shared/types/casl';
+import { MatchState, MatchData, BattleMatchState, FighterState, MatchEvent, MatchResults, CombatStats, Position } from '../../../shared/types/match';
 import { ActionType } from '../../../shared/types/actions';
 
 /**
@@ -28,21 +24,11 @@ export class Match {
   public state: MatchState;
   public playerA: Player;
   public playerB: Player;
-  public codeA?: string;
-  public codeB?: string;
-  public codeTypeA: CodeLanguage;
-  public codeTypeB: CodeLanguage;
-  public readyA: boolean;
-  public readyB: boolean;
-  public countdown: number;
   public createdAt: number;
-  private countdownInterval?: NodeJS.Timeout;
   
   // Battle state
   private battleInterval?: NodeJS.Timeout;
   private battleState?: BattleMatchState;
-  private executorA?: CASLExecutor | JSExecutor;
-  private executorB?: CASLExecutor | JSExecutor;
   private battleStartTime?: number;
   private statsA: CombatStats;
   private statsB: CombatStats;
@@ -57,12 +43,7 @@ export class Match {
     this.state = MatchState.BATTLE;
     this.playerA = playerA;
     this.playerB = playerB;
-    this.readyA = false;
-    this.readyB = false;
-    this.countdown = 0;
     this.createdAt = Date.now();
-    this.codeTypeA = 'CASL';
-    this.codeTypeB = 'CASL';
 
     // Update player statuses
     this.playerA.status = PlayerStatus.IN_MATCH;
@@ -86,71 +67,6 @@ export class Match {
   }
 
   /**
-   * Submit code for a player (valid during BATTLE state).
-   * Also reinitialises the executor so the new strategy takes effect immediately.
-   */
-  submitCode(playerId: string, code: string, language: CodeLanguage = 'CASL'): boolean {
-    if (this.state !== MatchState.BATTLE) {
-      return false;
-    }
-
-    if (playerId === this.playerA.id) {
-      this.codeA = code;
-      this.codeTypeA = language;
-      this.executorA = this.buildExecutor(code, language);
-      return this.executorA !== undefined;
-    } else if (playerId === this.playerB.id) {
-      this.codeB = code;
-      this.codeTypeB = language;
-      this.executorB = this.buildExecutor(code, language);
-      return this.executorB !== undefined;
-    }
-
-    return false;
-  }
-
-  /**
-   * Build an executor from code + language.  Returns undefined on parse failure.
-   */
-  private buildExecutor(code: string, language: CodeLanguage): CASLExecutor | JSExecutor | undefined {
-    if (language === 'JS') {
-      return new JSExecutor(code);
-    }
-    const parser = new CASLParser(code);
-    const result = parser.parse();
-    if (!result.success || !result.strategy) {
-      return undefined;
-    }
-    return new CASLExecutor(result.strategy);
-  }
-
-  /**
-   * Mark a player as ready
-   */
-  markReady(playerId: string): boolean {
-    if (this.state !== MatchState.PREPARATION) {
-      return false;
-    }
-
-    if (playerId === this.playerA.id) {
-      this.readyA = true;
-      return true;
-    } else if (playerId === this.playerB.id) {
-      this.readyB = true;
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * Check if both players are ready
-   */
-  areBothReady(): boolean {
-    return this.readyA && this.readyB;
-  }
-
-  /**
    * Check if a player is in this match
    */
   hasPlayer(playerId: string): boolean {
@@ -170,75 +86,10 @@ export class Match {
   }
 
   /**
-   * Start the countdown timer
-   */
-  startCountdown(onTick: (seconds: number) => void, onComplete: () => void): void {
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-    }
-
-    this.countdownInterval = setInterval(() => {
-      this.countdown--;
-      onTick(this.countdown);
-
-      if (this.countdown <= 0) {
-        this.stopCountdown();
-        onComplete();
-      }
-    }, 1000);
-  }
-
-  /**
-   * Stop the countdown timer
-   */
-  stopCountdown(): void {
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = undefined;
-    }
-  }
-
-  /**
-   * Transition to battle state
-   */
-  startBattle(): void {
-    this.stopCountdown();
-    this.state = MatchState.BATTLE;
-  }
-  
-  /**
    * Start the actual battle simulation.
-   * If code has not been submitted for a player, that player uses a default APPROACH strategy.
+   * Fighters start idle; players trigger actions via buttons.
    */
   startBattleSimulation(onBroadcast: (state: BattleMatchState) => void, onFinish: (results: MatchResults) => void): void {
-    // Parse and create executors only if code was submitted
-    if (this.codeA) {
-      if (this.codeTypeA === 'JS') {
-        this.executorA = new JSExecutor(this.codeA);
-      } else {
-        const parserA = new CASLParser(this.codeA);
-        const parseResultA = parserA.parse();
-        if (!parseResultA.success || !parseResultA.strategy) {
-          console.error('Cannot start battle: code parsing failed for player A');
-          return;
-        }
-        this.executorA = new CASLExecutor(parseResultA.strategy);
-      }
-    }
-
-    if (this.codeB) {
-      if (this.codeTypeB === 'JS') {
-        this.executorB = new JSExecutor(this.codeB);
-      } else {
-        const parserB = new CASLParser(this.codeB);
-        const parseResultB = parserB.parse();
-        if (!parseResultB.success || !parseResultB.strategy) {
-          console.error('Cannot start battle: code parsing failed for player B');
-          return;
-        }
-        this.executorB = new CASLExecutor(parseResultB.strategy);
-      }
-    }
     this.onBroadcast = onBroadcast;
     this.onFinish = onFinish;
     this.battleStartTime = Date.now();
@@ -303,72 +154,23 @@ export class Match {
     }
     
     const { fighterA, fighterB } = this.battleState;
-    
-    // Build execution contexts
-    const distance = calculateDistance(fighterA.position, fighterB.position);
-    
-    const contextA: ExecutionContext = {
-      self: {
-        health: fighterA.health,
-        attackCooldown: fighterA.attackCooldown
-      },
-      enemy: {
-        health: fighterB.health,
-        attackCooldown: fighterB.attackCooldown
-      },
-      distance
-    };
-    
-    const contextB: ExecutionContext = {
-      self: {
-        health: fighterB.health,
-        attackCooldown: fighterB.attackCooldown
-      },
-      enemy: {
-        health: fighterA.health,
-        attackCooldown: fighterA.attackCooldown
-      },
-      distance
-    };
 
-    // Determine action for player A: pending override > executor > default APPROACH
+    // Determine action for player A: consume pending action or default to IDLE
     let actionA: ActionType;
     if (this.pendingActionA !== undefined) {
       actionA = this.pendingActionA;
       this.pendingActionA = undefined;
-    } else if (this.executorA) {
-      actionA = this.codeTypeA === 'JS'
-        ? (this.executorA as JSExecutor).execute({
-            distance,
-            health: fighterA.health,
-            opponentHealth: fighterB.health,
-            position: fighterA.position,
-            opponentPosition: fighterB.position,
-            tick: this.battleState.tick
-          })
-        : (this.executorA as CASLExecutor).execute(contextA);
     } else {
-      actionA = 'APPROACH';
+      actionA = 'IDLE';
     }
 
-    // Determine action for player B: pending override > executor > default APPROACH
+    // Determine action for player B: consume pending action or default to IDLE
     let actionB: ActionType;
     if (this.pendingActionB !== undefined) {
       actionB = this.pendingActionB;
       this.pendingActionB = undefined;
-    } else if (this.executorB) {
-      actionB = this.codeTypeB === 'JS'
-        ? (this.executorB as JSExecutor).execute({
-            distance,
-            health: fighterB.health,
-            opponentHealth: fighterA.health,
-            position: fighterB.position,
-            opponentPosition: fighterA.position,
-            tick: this.battleState.tick
-          })
-        : (this.executorB as CASLExecutor).execute(contextB);
     } else {
-      actionB = 'APPROACH';
+      actionB = 'IDLE';
     }
     
     // Simulate tick
@@ -572,7 +374,6 @@ export class Match {
    * Transition to finished state
    */
   finish(): void {
-    this.stopCountdown();
     this.state = MatchState.FINISHED;
     this.playerA.status = PlayerStatus.ONLINE;
     this.playerB.status = PlayerStatus.ONLINE;
@@ -587,11 +388,6 @@ export class Match {
       state: this.state,
       playerA: this.playerA.toPublicData(),
       playerB: this.playerB.toPublicData(),
-      codeA: this.codeA,
-      codeB: this.codeB,
-      readyA: this.readyA,
-      readyB: this.readyB,
-      countdown: this.countdown,
       createdAt: this.createdAt
     };
   }
@@ -600,7 +396,6 @@ export class Match {
    * Clean up resources
    */
   cleanup(): void {
-    this.stopCountdown();
     if (this.battleInterval) {
       clearInterval(this.battleInterval);
       this.battleInterval = undefined;

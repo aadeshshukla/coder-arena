@@ -2,8 +2,6 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Match } from '../core/Match';
 import { AuthManager } from './AuthManager';
 import { ActionManager } from './ActionManager';
-import { CASLParser } from '../engine/casl/CASLParser';
-import { CASLValidator } from '../engine/casl/CASLValidator';
 import { JSValidator } from '../engine/js/JSValidator';
 import { BattleMatchState, MatchResults, CodeLanguage } from '../../../shared/types/match';
 
@@ -57,9 +55,9 @@ export class MatchManager {
   }
 
   /**
-   * Submit code for a player in a match
+   * Submit JS code validation for a player in a match.
    */
-  submitCode(playerId: string, matchId: string, code: string, language: CodeLanguage = 'CASL'): {
+  submitCode(playerId: string, matchId: string, code: string, language: CodeLanguage = 'JS'): {
     success: boolean;
     errors?: Array<{ message: string; line?: number }>;
   } {
@@ -73,82 +71,16 @@ export class MatchManager {
       return { success: false, errors: [{ message: 'Player not in this match' }] };
     }
 
-    if (language === 'JS') {
-      // Validate JavaScript code
-      const jsValidator = new JSValidator();
-      const jsResult = jsValidator.validate(code);
-      if (!jsResult.valid) {
-        return { success: false, errors: jsResult.errors };
-      }
-    } else {
-      // Validate CASL code
-      const parser = new CASLParser(code);
-      const parseResult = parser.parse();
-
-      if (!parseResult.success || !parseResult.strategy) {
-        return { 
-          success: false, 
-          errors: parseResult.errors?.map(e => ({ message: e })) || [{ message: 'Failed to parse code' }]
-        };
-      }
-
-      const validator = new CASLValidator();
-      const validationResult = validator.validate(parseResult.strategy);
-
-      if (!validationResult.valid) {
-        return { 
-          success: false, 
-          errors: validationResult.errors?.map(e => ({ message: e })) || [{ message: 'Code validation failed' }]
-        };
-      }
+    // Validate JavaScript code
+    const jsValidator = new JSValidator();
+    const jsResult = jsValidator.validate(code);
+    if (!jsResult.valid) {
+      return { success: false, errors: jsResult.errors };
     }
-
-    // Submit code with language
-    match.submitCode(playerId, code, language);
 
     console.log(`Player ${playerId} submitted ${language} code for match ${matchId}`);
 
     return { success: true };
-  }
-
-  /**
-   * Mark a player as ready
-   */
-  markPlayerReady(playerId: string, matchId: string): boolean {
-    const match = this.matches.get(matchId);
-    
-    if (!match) {
-      return false;
-    }
-
-    if (!match.hasPlayer(playerId)) {
-      return false;
-    }
-
-    // Check if player has submitted code
-    const hasCode = (playerId === match.playerA.id && match.codeA) ||
-                    (playerId === match.playerB.id && match.codeB);
-
-    if (!hasCode) {
-      return false;
-    }
-
-    match.markReady(playerId);
-
-    // Notify opponent
-    const opponent = match.getOpponent(playerId);
-    if (opponent) {
-      this.io.to(opponent.socketId).emit('opponent:ready', { ready: true });
-    }
-
-    console.log(`Player ${playerId} is ready for match ${matchId}`);
-
-    // Check if both players are ready
-    if (match.areBothReady()) {
-      this.startMatch(matchId);
-    }
-
-    return true;
   }
 
   /**
@@ -175,37 +107,6 @@ export class MatchManager {
     return true;
   }
 
-  /**
-   * Start a match (transition to battle)
-   */
-  private startMatch(matchId: string): void {
-    const match = this.matches.get(matchId);
-    
-    if (!match) {
-      return;
-    }
-
-    match.startBattle();
-
-    // Emit match:start to both players
-    this.io.to(match.playerA.socketId).emit('match:start', { matchId });
-    this.io.to(match.playerB.socketId).emit('match:start', { matchId });
-
-    console.log(`Match ${matchId} started (entering battle phase)`);
-
-    // Start the actual battle simulation
-    match.startBattleSimulation(
-      // On broadcast
-      (state: BattleMatchState) => {
-        this.broadcastMatchState(matchId, state);
-      },
-      // On finish
-      (results: MatchResults) => {
-        this.handleMatchFinish(matchId, results);
-      }
-    );
-  }
-  
   /**
    * Broadcast match state to players and spectators
    */
@@ -255,36 +156,6 @@ export class MatchManager {
   getMatchBattleState(matchId: string): BattleMatchState | undefined {
     const match = this.matches.get(matchId);
     return match?.getBattleState();
-  }
-
-  /**
-   * Handle countdown completion
-   */
-  private handleCountdownComplete(matchId: string): void {
-    const match = this.matches.get(matchId);
-    
-    if (!match) {
-      return;
-    }
-
-    console.log(`Match ${matchId} countdown completed`);
-
-    // Auto-start match even if not both ready
-    this.startMatch(matchId);
-  }
-
-  /**
-   * Broadcast countdown to match participants
-   */
-  private broadcastCountdown(matchId: string, seconds: number): void {
-    const match = this.matches.get(matchId);
-    
-    if (!match) {
-      return;
-    }
-
-    this.io.to(match.playerA.socketId).emit('match:countdown', { secondsRemaining: seconds });
-    this.io.to(match.playerB.socketId).emit('match:countdown', { secondsRemaining: seconds });
   }
 
   /**
